@@ -15,6 +15,7 @@
 #include <time.h>
 #include <stdio.h>
 #include <assert.h>
+#include <pthread.h>
 
 #define EGL_PX_CORE_FPS 30
 

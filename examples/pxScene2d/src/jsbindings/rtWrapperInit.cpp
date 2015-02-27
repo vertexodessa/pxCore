@@ -9,18 +9,6 @@
 
 using namespace v8;
 
-struct EventLoopContext
-{
-  pxEventLoop* eventLoop;
-};
-
-static void* processEventLoop(void* argp)
-{
-  EventLoopContext* ctx = reinterpret_cast<EventLoopContext *>(argp);
-  ctx->eventLoop->run();
-  return 0;
-}
-
 enum WindowCallback
 {
   eCreate = 0,
@@ -45,17 +33,15 @@ public:
     : pxWindow()
     , mScene(new pxScene2d())
     , mEventLoop(new pxEventLoop())
+    , mX(x)
+    , mY(y)
+    , mW(w)
+    , mH(h)
   {
     mJavaScene.Reset(isolate, rtObjectWrapper::createFromObjectReference(isolate, mScene.getPtr()));
 
-    rtLogInfo("creating native with [%d, %d, %d, %d]", x, y, w, h);
-    init(x, y, w, h);
-
-    rtLogInfo("initializing scene");
-    mScene->init();
-
     rtLogInfo("starting background thread for event loop processing");
-    startEventProcessingThread();
+    pthread_create(&mEventLoopThread, NULL, &processEventLoop, this);
 
     // we start a timer in case there aren't any other evens to the keep the
     // nodejs event loop alive. Fire a time repeatedly.
@@ -68,11 +54,21 @@ public:
     return PersistentToLocal(isolate, mJavaScene);
   }
 
-  void startEventProcessingThread()
+  static void* processEventLoop(void* argp)
   {
-    EventLoopContext* ctx = new EventLoopContext();
-    ctx->eventLoop = mEventLoop;
-    pthread_create(&mEventLoopThread, NULL, &processEventLoop, ctx);
+    jsWindow* win = reinterpret_cast<jsWindow *>(argp);
+    win->runEventLoop();
+    return 0;
+  }
+
+  void runEventLoop()
+  {
+    rtLogInfo("creating native with [%d, %d, %d, %d]", mX, mY, mW, mH);
+    init(mX, mY, mW, mH);
+
+    rtLogInfo("initializing scene");
+    mScene->init();
+    mEventLoop->run();
   }
 
   virtual ~jsWindow()
@@ -145,6 +141,11 @@ private:
 
   pthread_t mEventLoopThread;
   uv_timer_t mTimer;
+
+  int mX;
+  int mY;
+  int mW;
+  int mH;
 };
 
 static jsWindow* mainWindow = NULL;
