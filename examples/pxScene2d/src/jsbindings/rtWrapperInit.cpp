@@ -43,8 +43,8 @@ public:
     rtLogInfo("starting background thread for event loop processing");
     pthread_create(&mEventLoopThread, NULL, &processEventLoop, this);
 
-    // we start a timer in case there aren't any other evens to the keep the
-    // nodejs event loop alive. Fire a time repeatedly.
+    // we start a timer in case there aren't any other events to the keep the
+    // nodejs event loop alive. Fire a timer repeatedly.
     uv_timer_init(uv_default_loop(), &mTimer);
     uv_timer_start(&mTimer, timerCallback, 1000, 1000);
   }
