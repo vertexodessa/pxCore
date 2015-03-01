@@ -33,6 +33,7 @@ public:
     : pxWindow()
     , mScene(new pxScene2d())
     , mEventLoop(new pxEventLoop())
+    , mIsInitialized(false)
     , mX(x)
     , mY(y)
     , mW(w)
@@ -40,8 +41,21 @@ public:
   {
     mJavaScene.Reset(isolate, rtObjectWrapper::createFromObjectReference(isolate, mScene.getPtr()));
 
+    pthread_mutex_init(&mMutex, NULL);
+    pthread_cond_init(&mCondition, NULL);
+
     rtLogInfo("starting background thread for event loop processing");
     pthread_create(&mEventLoopThread, NULL, &processEventLoop, this);
+
+    // wait here until processEventLoop actually initializes the window
+    pthread_mutex_lock(&mMutex);
+    while (!mIsInitialized)
+      pthread_cond_wait(&mCondition, &mMutex);
+    pthread_mutex_unlock(&mMutex);
+
+    // TODO: check error on initialize. If it failed for some reason, then we
+    // should return that error to the caller and make sure the eventloop
+    // processing thread exits
 
     // we start a timer in case there aren't any other events to the keep the
     // nodejs event loop alive. Fire a timer repeatedly.
@@ -68,6 +82,12 @@ public:
 
     rtLogInfo("initializing scene");
     mScene->init();
+
+    pthread_mutex_lock(&mMutex);
+    mIsInitialized = true;
+    pthread_cond_signal(&mCondition);
+    pthread_mutex_unlock(&mMutex);
+
     mEventLoop->run();
   }
 
@@ -140,6 +160,10 @@ private:
   Persistent<Object> mJavaScene;
 
   pthread_t mEventLoopThread;
+  pthread_mutex_t mMutex;
+  pthread_cond_t mCondition;
+  bool mIsInitialized;
+
   uv_timer_t mTimer;
 
   int mX;
@@ -167,7 +191,6 @@ static void disposeNode(const FunctionCallbackInfo<Value>& args)
 
 static void getScene(const FunctionCallbackInfo<Value>& args)
 {
-
   if (mainWindow == NULL)
   {
     // This is somewhat experimental. There are concurrency issues with glut.
@@ -212,11 +235,8 @@ void ModuleInit(
   rtFunctionWrapper::exportPrototype(isolate, target);
   rtObjectWrapper::exportPrototype(isolate, target);
 
-  target->Set(String::NewFromUtf8(isolate, "getScene"),
-    FunctionTemplate::New(isolate, getScene)->GetFunction());
-
-  target->Set(String::NewFromUtf8(isolate, "dispose"),
-    FunctionTemplate::New(isolate, disposeNode)->GetFunction());
+  target->Set(OneByte(isolate, "getScene"), FunctionTemplate::New(isolate, getScene)->GetFunction());
+  target->Set(OneByte(isolate, "dispose"), FunctionTemplate::New(isolate, disposeNode)->GetFunction());
 }
 
 NODE_MODULE_CONTEXT_AWARE(px, ModuleInit);

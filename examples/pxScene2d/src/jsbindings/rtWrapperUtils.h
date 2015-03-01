@@ -84,6 +84,11 @@ private:
   std::string mMessage;
 };
 
+inline v8::Local<v8::String> OneByte(v8::Isolate* isolate, const char* s)
+{
+  return v8::String::NewFromOneByte(isolate, reinterpret_cast<const uint8_t*>(s));
+}
+
 inline rtString toString(const v8::Handle<v8::Object>& obj)
 {
   v8::String::Utf8Value utf(obj->ToString());
