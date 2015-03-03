@@ -4,15 +4,18 @@
 #include <stddef.h>
 
 #if defined(PX_PLATFORM_WAYLAND_EGL) || defined(PX_PLATFORM_GENERIC_EGL)
-
 #include <GLES2/gl2.h>
-
 #else
-
+#if defined(RT_PLATFORM_LINUX)
 #include <GL/glew.h>
-#include <GL/gl.h>
-
 #endif
+#endif
+
+#ifdef _WIN32
+#include <Windows.h>
+#include <GL/gl.h>
+#endif
+
 
 typedef struct _pxContextSurfaceNativeDesc
 {

@@ -20,6 +20,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SpriteExample", "Sprite\Spr
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HoverExample", "Hover\Hover.vcxproj", "{AD23C101-5E8B-4E57-9234-A5623FFF810B}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "testScene", "testScene\testScene.vcxproj", "{871A27F9-4C76-4159-B60E-B1D9FB6FD601}"
+	ProjectSection(ProjectDependencies) = postProject
+		{8197EB44-21BA-49E7-95DD-DDB4FF8CC6C0} = {8197EB44-21BA-49E7-95DD-DDB4FF8CC6C0}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -100,6 +105,12 @@ Global
 		{AD23C101-5E8B-4E57-9234-A5623FFF810B}.Release|Win32.Build.0 = Release|Win32
 		{AD23C101-5E8B-4E57-9234-A5623FFF810B}.Release|x64.ActiveCfg = Release|x64
 		{AD23C101-5E8B-4E57-9234-A5623FFF810B}.Release|x64.Build.0 = Release|x64
+		{871A27F9-4C76-4159-B60E-B1D9FB6FD601}.Debug|Win32.ActiveCfg = Debug|Win32
+		{871A27F9-4C76-4159-B60E-B1D9FB6FD601}.Debug|Win32.Build.0 = Debug|Win32
+		{871A27F9-4C76-4159-B60E-B1D9FB6FD601}.Debug|x64.ActiveCfg = Debug|x64
+		{871A27F9-4C76-4159-B60E-B1D9FB6FD601}.Release|Win32.ActiveCfg = Release|Win32
+		{871A27F9-4C76-4159-B60E-B1D9FB6FD601}.Release|Win32.Build.0 = Release|Win32
+		{871A27F9-4C76-4159-B60E-B1D9FB6FD601}.Release|x64.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

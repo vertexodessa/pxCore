@@ -1,10 +1,26 @@
 #include "rtLibrary.h"
 #include "rtLog.h"
 
+#ifdef _WIN32
+#include <Windows.h>
+#else
 #include <dlfcn.h>
+#endif
 
-// TODO: win32 impls
+#ifdef _WIN32
+rtError rtLoadLibrary(const char* name, rtLibrary* lib)
+{
+  rtLogFatal("not implemented");
+  return RT_FAIL;
+}
 
+rtError rtLookupFunction(rtLibrary lib, const char* func, rtFunctionAddr* addr)
+{
+  rtLogFatal("not implemented");
+  return RT_FAIL;
+}
+
+#else
 rtError rtLoadLibrary(const char* name, rtLibrary* lib)
 {
   if (!name)
@@ -34,4 +50,5 @@ rtError rtLookupFunction(rtLibrary lib, const char* func, rtFunctionAddr* addr)
   *addr = sym;
   return RT_OK;
 }
+#endif
 

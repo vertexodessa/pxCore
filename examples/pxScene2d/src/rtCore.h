@@ -9,6 +9,9 @@
 
 #if defined(RT_PLATFORM_LINUX)
 #include "linux/rtConfigNative.h"
+#elif defined(RT_PLATFORM_WINDOWS)
+#include <Windows.h>
+#include "win/rtConfigNative.h"
 #else
 #error "PX_PLATFORM NOT HANDLED"
 #endif

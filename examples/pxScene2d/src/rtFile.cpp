@@ -4,11 +4,16 @@
 #include <stdlib.h>
 #define __STDC_LIMIT_MACROS
 #include <stdint.h>
+
+#ifdef _WIN32
+#include <stdio.h>
+#else
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <string.h>
+#endif
 
+#include <string.h>
 #include "rtFile.h"
 
 rtData::rtData(): mData(NULL), mLength(0) {}
@@ -37,7 +42,28 @@ rtError rtData::term() { delete [] mData; mLength = 0; return RT_OK; }
 uint8_t* rtData::data() { return mData; }
 uint32_t rtData::length() { return mLength; }
 
-rtError rtLoadFile(const char* f, rtData& data) {
+
+#ifdef _WIN32
+rtError rtLoadFile(const char* f, rtData& data)
+{
+  FILE* fin = fopen(f, "r");
+  if (!fin)
+    return RT_FAIL;
+
+  fseek(fin, 0, SEEK_END);
+  long length = ftell(fin);
+  fseek(fin, 0, SEEK_SET); 
+
+  if (data.init(length) == RT_OK)
+    fread(data.data(), sizeof(uint8_t), length, fin);
+
+  fclose(fin);
+  return RT_OK;
+}
+
+#else
+rtError rtLoadFile(const char* f, rtData& data) 
+{
   rtError e = RT_FAIL;
   struct stat st;
   int fd = open(f, O_RDONLY);
@@ -54,3 +80,5 @@ rtError rtLoadFile(const char* f, rtData& data) {
   }
   return e;
 }
+#endif
+

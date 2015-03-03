@@ -12,36 +12,46 @@ extern "C" {
 #include "utf8.h"
 }
 
+static char* STRDUP(const char* s)
+{
+  if (!s)
+    return NULL;
+
+#ifdef _WIN32
+  return _strdup(s);
+#else
+  return strdup(s);
+#endif
+}
+
 rtString::rtString(): mData(0)  {
   //  printf("default constructor\n");
 }
 
-rtString::rtString(char* s): mData(0) {
-  if (s)
-    mData = strdup(s);
-  //  printf("char* constructor\n");
+rtString::rtString(char* s)
+{
+  mData = STRDUP(s);
 }
 
-rtString::rtString(const char* s): mData(0) {
-  if (s)
-    mData = strdup(s);
+rtString::rtString(const char* s)
+{
+  mData = STRDUP(s);
 }
 
-rtString::rtString(const rtString& s): mData(0) {
-  if (s.mData)
-    mData = strdup(s.mData);
-  //  printf("copy constructor\n");
+rtString::rtString(const rtString& s)
+{
+  mData = STRDUP(s.mData);
 }
 
-rtString& rtString::operator=(const rtString& s) {
-  if (s.mData) // Aliases
-    mData = strdup(s.mData);
+rtString& rtString::operator=(const rtString& s)
+{
+  mData = STRDUP(s.mData);
   return *this;
 }
 
-rtString& rtString::operator=(const char* s) {
-  if (s) // Aliases
-    mData = strdup(s);
+rtString& rtString::operator=(const char* s)
+{
+  mData = STRDUP(s);
   return *this;
 }
 
