@@ -2,9 +2,9 @@
 
 #include <process.h>
 
-void launchThread(void* threadPool)
+static void workerStart(void* argp)
 {
-  rtThreadPoolNative* pool = (rtThreadPoolNative*)threadPool;
+  rtThreadPoolNative* pool = reinterpret_cast<rtThreadPoolNative *>(argp);
   pool->startThread();
 }
 
@@ -30,7 +30,7 @@ bool rtThreadPoolNative::initialize()
   mRunning = true;
   for (int i = 0; i < mNumberOfThreads; i++)
   {
-    HANDLE hThread = (HANDLE)_beginthread(launchThread, 0, this);
+    HANDLE hThread = (HANDLE)_beginthread(workerStart, 0, this);
     if (hThread != (HANDLE)-1L)
       return false;
     mThreads.push_back(hThread);
@@ -41,12 +41,13 @@ bool rtThreadPoolNative::initialize()
 void rtThreadPoolNative::destroy()
 {
   mThreadTaskMutex.lock();
-  mRunning = false; //mRunning is accessed by other threads
+  mRunning = false;
   mThreadTaskMutex.unlock();
-  //broadcast to all the threads that we are shutting down
-  mThreadTaskCondition.broadcast();
 
   typedef std::vector<HANDLE>::iterator iterator;
+  for (iterator i = mThreads.begin(); i != mThreads.end(); ++i)
+    mThreadTaskCondition.signal();
+
   for (iterator i = mThreads.begin(); i != mThreads.end(); ++i)
     WaitForSingleObject(*i, INFINITE);
 }
@@ -57,15 +58,15 @@ void rtThreadPoolNative::startThread()
   while (true)
   {
     mThreadTaskMutex.lock();
-    while (mRunning && (mThreadTasks.empty()))
-    {
+    while (mRunning && mThreadTasks.empty())
       mThreadTaskCondition.wait(mThreadTaskMutex.getNativeMutexDescription());
-    }
+    
     if (!mRunning)
     {
       mThreadTaskMutex.unlock();
       return;
     }
+
     threadTask = mThreadTasks.front();
     mThreadTasks.pop_front();
     mThreadTaskMutex.unlock();
@@ -81,8 +82,8 @@ void rtThreadPoolNative::startThread()
 
 void rtThreadPoolNative::executeTask(rtThreadTask* threadTask)
 {
-    mThreadTaskMutex.lock();
-    mThreadTasks.push_back(threadTask);
-    mThreadTaskCondition.signal();
-    mThreadTaskMutex.unlock();
+  mThreadTaskMutex.lock();
+  mThreadTasks.push_back(threadTask);
+  mThreadTaskCondition.signal();
+  mThreadTaskMutex.unlock();
 }

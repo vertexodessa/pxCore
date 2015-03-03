@@ -104,5 +104,8 @@
     <ClCompile Include="..\..\examples\pxScene2d\src\win\rtThreadPoolNative.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\examples\pxScene2d\src\utf8.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

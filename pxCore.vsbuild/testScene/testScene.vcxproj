@@ -50,6 +50,7 @@
     <ClCompile Include="..\..\examples\pxScene2d\src\rtThreadPool.cpp" />
     <ClCompile Include="..\..\examples\pxScene2d\src\rtThreadTask.cpp" />
     <ClCompile Include="..\..\examples\pxScene2d\src\rtValue.cpp" />
+    <ClCompile Include="..\..\examples\pxScene2d\src\utf8.c" />
     <ClCompile Include="..\..\examples\pxScene2d\src\win\rtMutexNative.cpp" />
     <ClCompile Include="..\..\examples\pxScene2d\src\win\rtThreadPoolNative.cpp" />
   </ItemGroup>
