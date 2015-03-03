@@ -13,8 +13,27 @@ public:
 class rtThreadCondition : public rtThreadConditionNative
 {
 public:
-    rtThreadCondition() {}
-    ~rtThreadCondition() {}
+  rtThreadCondition() {}
+  ~rtThreadCondition() {}
+};
+
+class rtScopedLock
+{
+public:
+  rtScopedLock(rtMutex& m) : mMutex(&m)
+  {
+    mMutex->lock();
+  }
+
+  ~rtScopedLock()
+  {
+    mMutex->unlock();
+  }
+private:
+  rtScopedLock(const rtScopedLock& rhs) : mMutex(NULL) { }
+  rtScopedLock const& operator = (const rtScopedLock& rhs) { return *this; }
+private:
+  rtMutex* mMutex;
 };
 
 #endif //RT_MUTEX_H

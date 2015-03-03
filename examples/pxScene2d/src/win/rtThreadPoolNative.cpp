@@ -31,7 +31,7 @@ bool rtThreadPoolNative::initialize()
   for (int i = 0; i < mNumberOfThreads; i++)
   {
     HANDLE hThread = (HANDLE)_beginthread(workerStart, 0, this);
-    if (hThread != (HANDLE)-1L)
+    if (hThread == (HANDLE)-1L)
       return false;
     mThreads.push_back(hThread);
   }
@@ -50,6 +50,8 @@ void rtThreadPoolNative::destroy()
 
   for (iterator i = mThreads.begin(); i != mThreads.end(); ++i)
     WaitForSingleObject(*i, INFINITE);
+
+  mThreads.clear();
 }
 
 void rtThreadPoolNative::startThread()
@@ -87,3 +89,5 @@ void rtThreadPoolNative::executeTask(rtThreadTask* threadTask)
   mThreadTaskCondition.signal();
   mThreadTaskMutex.unlock();
 }
+
+

@@ -18,9 +18,9 @@ rtThreadPool::~rtThreadPool()
 
 rtThreadPool* rtThreadPool::globalInstance()
 {
-    if (mGlobalInstance == NULL)
-    {
-        mGlobalInstance = new rtThreadPool(RT_THREAD_POOL_DEFAULT_THREAD_COUNT);
-    }
-    return mGlobalInstance;
+  if (mGlobalInstance == NULL)
+  {
+    mGlobalInstance = new rtThreadPool(RT_THREAD_POOL_DEFAULT_THREAD_COUNT);
+  }
+  return mGlobalInstance;
 }

@@ -39,6 +39,7 @@ rtThreadConditionNative::~rtThreadConditionNative()
 void rtThreadConditionNative::wait(rtMutexNativeDesc desc)
 {
   SignalObjectAndWait(desc, mCond, INFINITE, FALSE);
+  WaitForSingleObject(desc, INFINITE);
 }
 
 void rtThreadConditionNative::signal()
