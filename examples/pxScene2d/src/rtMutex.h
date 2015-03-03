@@ -30,8 +30,8 @@ public:
     mMutex->unlock();
   }
 private:
-  rtScopedLock(const rtScopedLock& rhs) : mMutex(NULL) { }
-  rtScopedLock const& operator = (const rtScopedLock& rhs) { return *this; }
+  rtScopedLock(const rtScopedLock& ) : mMutex(NULL) { }
+  rtScopedLock const& operator = (const rtScopedLock& ) { return *this; }
 private:
   rtMutex* mMutex;
 };
