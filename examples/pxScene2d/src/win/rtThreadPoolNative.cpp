@@ -27,6 +27,8 @@ rtThreadPoolNative::~rtThreadPoolNative()
 
 bool rtThreadPoolNative::initialize()
 {
+  rtScopedLock lock(mThreadTaskMutex);
+
   mRunning = true;
   for (int i = 0; i < mNumberOfThreads; i++)
   {
@@ -40,16 +42,15 @@ bool rtThreadPoolNative::initialize()
 
 void rtThreadPoolNative::destroy()
 {
-  mThreadTaskMutex.lock();
-  mRunning = false;
-  mThreadTaskMutex.unlock();
+  {
+    rtScopedLock lock(mThreadTaskMutex);
+    mRunning = false;
+    mThreadTaskCondition.broadcast();
+  }
 
   typedef std::vector<HANDLE>::iterator iterator;
   for (iterator i = mThreads.begin(); i != mThreads.end(); ++i)
-    mThreadTaskCondition.signal();
-
-  for (iterator i = mThreads.begin(); i != mThreads.end(); ++i)
-    WaitForSingleObject(*i, INFINITE);
+    WaitForSingleObject(*i, INFINITE); // same as pthread_join()
 
   mThreads.clear();
 }
@@ -59,19 +60,17 @@ void rtThreadPoolNative::startThread()
   rtThreadTask* threadTask = NULL;
   while (true)
   {
-    mThreadTaskMutex.lock();
-    while (mRunning && mThreadTasks.empty())
-      mThreadTaskCondition.wait(mThreadTaskMutex.getNativeMutexDescription());
-    
-    if (!mRunning)
     {
-      mThreadTaskMutex.unlock();
-      return;
-    }
+      rtScopedLock lock(mThreadTaskMutex);
+      while (mRunning && mThreadTasks.empty())
+        mThreadTaskCondition.wait(mThreadTaskMutex.getNativeMutexDescription());
 
-    threadTask = mThreadTasks.front();
-    mThreadTasks.pop_front();
-    mThreadTaskMutex.unlock();
+      if (!mRunning)
+        return;
+
+      threadTask = mThreadTasks.front();
+      mThreadTasks.pop_front();
+    }
 
     if (threadTask != NULL)
     {
@@ -84,10 +83,9 @@ void rtThreadPoolNative::startThread()
 
 void rtThreadPoolNative::executeTask(rtThreadTask* threadTask)
 {
-  mThreadTaskMutex.lock();
+  rtScopedLock lock(mThreadTaskMutex);
   mThreadTasks.push_back(threadTask);
   mThreadTaskCondition.signal();
-  mThreadTaskMutex.unlock();
 }
 
 

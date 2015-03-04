@@ -2,7 +2,7 @@
 #define RT_MUTEX_NATIVE_H
 
 #include <Windows.h>
-typedef HANDLE rtMutexNativeDesc;
+typedef PCRITICAL_SECTION rtMutexNativeDesc;
 
 class rtThreadConditionNative;
 
@@ -17,7 +17,7 @@ public:
   void unlock();
   rtMutexNativeDesc getNativeMutexDescription();
 private:
-  HANDLE mMutex;
+  CRITICAL_SECTION mMutex;
 };
 
 class rtThreadConditionNative
@@ -29,7 +29,7 @@ public:
   void signal();
   void broadcast();
 private:
-  HANDLE mCond;
+  CONDITION_VARIABLE mCond;
 };
 
 #endif //RT_MUTEX_NATIVE_H

@@ -3,51 +3,49 @@
 
 rtMutexNative::rtMutexNative()
 {
-  mMutex = CreateMutex(NULL, FALSE, NULL);
+  InitializeCriticalSection(&mMutex);
 }
 
 rtMutexNative::~rtMutexNative()
 {
-  CloseHandle(mMutex);
 }
 
 void rtMutexNative::lock()
 {
-  WaitForSingleObject(mMutex, INFINITE);
+  EnterCriticalSection(&mMutex);
 }
 
 void rtMutexNative::unlock()
 {
-  ReleaseMutex(mMutex);
+  LeaveCriticalSection(&mMutex);
 }
 
 rtMutexNativeDesc rtMutexNative::getNativeMutexDescription()
 {
-  return mMutex;
+  return &mMutex;
 }
 
 rtThreadConditionNative::rtThreadConditionNative()
 {
-  mCond = CreateEvent(NULL, FALSE, FALSE, NULL);
+  InitializeConditionVariable(&mCond);
 }
 
 rtThreadConditionNative::~rtThreadConditionNative()
 {
-  CloseHandle(mCond);
+
 }
 
 void rtThreadConditionNative::wait(rtMutexNativeDesc desc)
 {
-  SignalObjectAndWait(desc, mCond, INFINITE, FALSE);
-  WaitForSingleObject(desc, INFINITE);
+  SleepConditionVariableCS(&mCond, desc, INFINITE);
 }
 
 void rtThreadConditionNative::signal()
 {
-  PulseEvent(mCond);
+  WakeConditionVariable(&mCond);
 }
 
 void rtThreadConditionNative::broadcast()
 {
-  PulseEvent(mCond);
+  WakeAllConditionVariable(&mCond);
 }
