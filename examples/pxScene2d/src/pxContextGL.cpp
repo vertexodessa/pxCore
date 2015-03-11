@@ -896,8 +896,12 @@ void pxContext::init()
 
   glEnable(GL_BLEND);
 
+#ifdef PX_PRESERVE_DST_ALPHA
+  glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+#else
   // assume non-premultiplied for now... 
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);  
+#endif
 
   glUseProgram(program);
 }
