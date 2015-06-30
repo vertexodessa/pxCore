@@ -1,3 +1,7 @@
+// pxCore CopyRight 2007-2015 John Robinson
+// Portable Framebuffer and Windowing Library
+// pxViewWindow.cpp
+
 #include "pxViewWindow.h"
 
 //#include "rtLog.h"
@@ -45,8 +49,8 @@ void pxViewWindow::invalidateRect(pxRect* r)
         }
         else
 #endif
-            mView->onDraw(mViewOffscreen, r);
-
+        //mView->onDraw(mViewOffscreen, r);
+		mView->onDraw(/*s*/);
 
         pxSurfaceNative s;
         beginNativeDrawing(s);
@@ -61,31 +65,15 @@ void pxViewWindow::invalidateRect(pxRect* r)
 #else
             mViewOffscreen.blit(s);
 #endif
-
-#if 0
-		    if (GetKeyState(VK_SCROLL) & 1)
-		    {
-			    // Draw dirty rect
-			    HPEN pen = CreatePen(PS_SOLID,1,RGB(255, 0, 0));
-			    HGDIOBJ brush = GetStockObject(NULL_BRUSH);
-			    HGDIOBJ oldPen = SelectObject(s, pen);
-			    HGDIOBJ oldBrush = SelectObject(s, brush);
-			    Rectangle(s, r->left(), r->top(), r->right(), r->bottom());
-			    SelectObject(s, oldBrush);
-			    SelectObject(s, oldPen);
-                DeleteObject(pen);
-                DeleteObject(brush);
-		    }
-#endif
         }
         else
 #endif
-            mViewOffscreen.blit(s);
+        mViewOffscreen.blit(s);
         endNativeDrawing(s);
     }
 }
 
-void pxViewWindow::onSize(int w, int h)
+void pxViewWindow::onSize(int32_t w, int32_t h)
 {
     mViewOffscreen.init(w, h);
 #if 0
@@ -98,7 +86,7 @@ void pxViewWindow::onSize(int w, int h)
 #endif
 }
 
-void pxViewWindow::onMouseDown(int x, int y, unsigned long flags)
+void pxViewWindow::onMouseDown(int32_t x, int32_t y, uint32_t flags)
 {
     if (mView)
     {
@@ -106,7 +94,7 @@ void pxViewWindow::onMouseDown(int x, int y, unsigned long flags)
     }
 }
 
-void pxViewWindow::onMouseUp(int x, int y, unsigned long flags)
+void pxViewWindow::onMouseUp(int32_t x, int32_t y, uint32_t flags)
 {
     if (mView)
     {
@@ -122,7 +110,7 @@ void pxViewWindow::onMouseLeave()
     }
 }
 
-void pxViewWindow::onMouseMove(int x, int y)
+void pxViewWindow::onMouseMove(int32_t x, int32_t y)
 {
     if (mView)
     {
@@ -130,8 +118,7 @@ void pxViewWindow::onMouseMove(int x, int y)
     }
 }
 
-#if 0
-void pxViewWindow::onKeyDown(int keycode, unsigned long flags)
+void pxViewWindow::onKeyDown(uint32_t keycode, uint32_t flags)
 {
     if (mView)
     {
@@ -139,20 +126,26 @@ void pxViewWindow::onKeyDown(int keycode, unsigned long flags)
     }
 }
 
-void pxViewWindow::onKeyUp(int keycode, unsigned long flags)
+void pxViewWindow::onKeyUp(uint32_t keycode, uint32_t flags)
 {
     if (mView)
     {
         mView->onKeyUp(keycode, flags);
     }
 }
-#endif
+
+void pxViewWindow::onChar(uint32_t codepoint)
+{
+  if (mView)
+    mView->onChar(codepoint);
+}
 
 void pxViewWindow::onDraw(pxSurfaceNative s)
 {
     if (mView)
     {
-        mViewOffscreen.blit(s);
+      //  mViewOffscreen.blit(s);
+        mView->onDraw(/*s*/);
     }
 }
 

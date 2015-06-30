@@ -1,4 +1,4 @@
-// Keyboard and Mouse Example CopyRight 2007-2009 John Robinson
+// Keyboard and Mouse Example CopyRight 2007-2015 John Robinson
 // Demonstrates how to handle keyboard and mouse events
 
 #include "pxCore.h"
@@ -57,7 +57,7 @@ private:
     //mTexture.blit(s);
   }
 
-  void onMouseDown(int x, int y, unsigned long flags)
+  void onMouseDown(int32_t x, int32_t y, uint32_t flags)
   {
     printf("Mouse Down (%d %d) modifiers: [", x, y);
     if (flags & PX_LEFTBUTTON)   printf("Left ");
@@ -69,7 +69,7 @@ private:
     printf("]\n");
   }
 
-  void onMouseUp(int x, int y, unsigned long flags)
+  void onMouseUp(int32_t x, int32_t y, uint32_t flags)
   {
     printf("Mouse Up (%d, %d) modifiers: [ ", x, y);
     if (flags & PX_LEFTBUTTON)   printf("Left ");
@@ -81,12 +81,12 @@ private:
     printf("]\n");
   }
 
-  void onMouseMove(int x, int y)
+  void onMouseMove(int32_t x, int32_t y)
   {
     printf("Mouse Move %d, %d\n", x, y);
   }
 
-  void onKeyDown(int c, unsigned long flags)
+  void onKeyDown(uint32_t c, uint32_t flags)
   {
     printf("Key Dn \"%s\" modifiers: [", getKeyDescription(c));
     if (flags & PX_MOD_SHIFT)   printf("Shift ");
@@ -97,7 +97,7 @@ private:
     printf("\n");
   }
 
-  void onKeyUp(int c, unsigned long flags)
+  void onKeyUp(uint32_t c, uint32_t flags)
   {
     printf("Key Up \"%s\" modifiers: [", getKeyDescription(c));
     if (flags & PX_MOD_SHIFT)   printf("Shift ");
@@ -108,7 +108,7 @@ private:
     printf("\n");
   }
 
-  const char * getKeyDescription( int keycode )
+  const char* getKeyDescription( uint32_t keycode )
   {
     switch (keycode)
     {

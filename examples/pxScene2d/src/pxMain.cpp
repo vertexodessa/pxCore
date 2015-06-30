@@ -6,11 +6,15 @@
 #endif
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <iostream>
 #include <fstream>
+
 #include "pxCore.h"
 #include "pxEventLoop.h"
 #include "pxWindow.h"
+#include "pxViewWindow.h"
+
 #include "pxOffscreen.h"
 #include <stdio.h>
 
@@ -37,14 +41,13 @@
 
 #include "testScene.h"
 
-#include "pxImageDownloader.h"
+#include "pxFileDownloader.h"
 
 extern rtRefT<pxScene2d> scene;
 
-
 pxEventLoop eventLoop;
 
-class myWindow: public pxWindow
+class testWindow: public pxViewWindow
 {
 private:
   // Event Handlers - Look in pxWindow.h for more
@@ -55,7 +58,8 @@ private:
     eventLoop.exit();
   }
 
-  void onSize(int newWidth, int newHeight)
+#if 0
+  void onSize(int32_t newWidth, int32_t newHeight)
   {
     scene->onSize(newWidth, newHeight);
   }
@@ -65,7 +69,7 @@ private:
     scene->onDraw();
   }
   
-  void onMouseDown(int x, int y, unsigned long flags)
+  void onMouseDown(int32_t x, int32_t y, uint32_t flags)
   {
     printf("Mouse Down (%d %d) modifiers: [", x, y);
     if (flags & PX_LEFTBUTTON)   printf("Left ");
@@ -77,7 +81,7 @@ private:
     printf("]\n");
   }
   
-  void onMouseUp(int x, int y, unsigned long flags)
+  void onMouseUp(int32_t x, int32_t y, uint32_t flags)
   {
     printf("Mouse Up (%d, %d) modifiers: [ ", x, y);
     if (flags & PX_LEFTBUTTON)   printf("Left ");
@@ -89,18 +93,14 @@ private:
     printf("]\n");
   }
   
-  void onMouseMove(int x, int y)
+  void onMouseMove(int32_t x, int32_t y)
   {
-    //printf("\nINFO ####################### onMouseMove(%d,%d)", x,y);
-
     //  printf("Mouse Move %d, %d\n", x, y);
     scene->onMouseMove(x,y);
   }
   
-  void onKeyDown(int c, unsigned long flags)
+  void onKeyDown(int32_t c, uint32_t flags)
   {
-    printf("\nINFO ####################### onKeyDown()");
-
     scene->onKeyDown(c, flags);
     printf("Key Dn \"%s\" modifiers: [", getKeyDescription(c));
     if (c == PX_KEY_NATIVE_ESCAPE)
@@ -116,7 +116,7 @@ private:
     printf("\n");
   }
   
-  void onKeyUp(int c, unsigned long flags)
+  void onKeyUp(int32_t c, uint32_t flags)
   {
     scene->onKeyUp(c, flags);
     printf("Key Up \"%s\" modifiers: [", getKeyDescription(c));
@@ -133,7 +133,7 @@ private:
      printf("onChar: %c\n", c);
   }
   
-  const char * getKeyDescription( int keycode )
+  const char * getKeyDescription( int32_t keycode )
   {
     switch (keycode) {
       case PX_KEY_NATIVE_PAUSE:        return "Pause";
@@ -237,8 +237,10 @@ private:
       default:                         return "Undefined";
     }
   }
-};
+#endif
+}; // CLASS
 
+#if 0
 void imageDownloadComplete(pxImageDownloadRequest* imageDownloadRequest)
 {
   if (imageDownloadRequest != NULL && imageDownloadRequest->getDownloadStatusCode() == 0)
@@ -253,27 +255,23 @@ void imageDownloadComplete(pxImageDownloadRequest* imageDownloadRequest)
   }
   delete imageDownloadRequest;
 }
+#endif
 
 int pxMain()
 {
-  char title[] = { "pxCore!" };
-
-  int width = 1280;
-  int height = 720;
-  myWindow win;
+  int width =  800;//1280;
+  int height = 400;//720;
+  testWindow win;
 
   win.init(10, 10, width, height);
 
-  // TODO we shouldn't have to this here... should happen under the hood
-  // in pxCore
-  scene->onSize(width, height);
-
-  testScene();
-
-  win.setTitle(title);
+  win.setTitle("pxCore!");
   win.setVisibility(true);
-
+ // win.setView(testScene());
+  win.setAnimationFPS(60);
+  
   eventLoop.run();
 
   return 0;
 }
+

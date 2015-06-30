@@ -154,7 +154,7 @@ void pxWindow::setVisibility(bool visible)
 	else HideWindow(mWindowRef);
 }
 
-pxError pxWindow::setAnimationFPS(long fps)
+pxError pxWindow::setAnimationFPS(uint32_t fps)
 {
 	if (theTimer)
 	{
@@ -173,9 +173,9 @@ pxError pxWindow::setAnimationFPS(long fps)
     return PX_OK;
 }
 
-void pxWindow::setTitle(char* title)
+void pxWindow::setTitle(const char* title)
 {
-	SetWindowTitleWithCFString(mWindowRef,CFStringCreateWithCString(nil,title,kCFStringEncodingASCII));
+    SetWindowTitleWithCFString(mWindowRef,CFStringCreateWithCString(nil,title,kCFStringEncodingASCII));
 }
 
 pxError pxWindow::beginNativeDrawing(pxSurfaceNative& s)
@@ -304,9 +304,9 @@ pascal OSStatus pxWindowNative::doWindowDrawContent (EventHandlerCallRef nextHan
 {
 	pxWindowNative* w = (pxWindowNative*)userData;
 	//SetPort(GetWindowPort(w->mWindowRef));
-	//w->onDraw(GetPortPixMap(GetWindowPort(w->mWindowRef)));
+   //w->onDraw(GetPortPixMap(GetWindowPort(w->mWindowRef)));
 
-	w->onDraw(GetWindowPort(w->mWindowRef));
+   w->onDraw(GetWindowPort(w->mWindowRef));
 	return CallNextEventHandler (nextHandler, theEvent);
 }	
 

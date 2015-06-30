@@ -22,8 +22,6 @@
 
 using namespace std;
 
-
-
 // Since the lifetime of the Display should include the lifetime of all windows
 // and eventloop that uses it - refcounting is utilized through this
 // wrapper class.
@@ -35,93 +33,93 @@ dfbDisplay;
 
 class displayRef
 {
-public:
-    displayRef();
-    ~displayRef();
+  public:
+  displayRef();
+  ~displayRef();
 
-    dfbDisplay* getDisplay() const;
+  dfbDisplay* getDisplay() const;
 
 private:
 
-    pxError createDfbDisplay();
-    void cleanupDfbDisplay();
+  pxError createDfbDisplay();
+  void cleanupDfbDisplay();
 
-    static dfbDisplay* mDisplay;
-    static int mRefCount;
+  static dfbDisplay* mDisplay;
+  static int mRefCount;
 };
 
 class pxWindowNative
 {
 public:
-pxWindowNative(): mTimerFPS(0), mLastWidth(-1), mLastHeight(-1),
-    mResizeFlag(false), mLastAnimationTime(0.0), mVisible(false), 
+  pxWindowNative(): mTimerFPS(0), mLastWidth(-1), mLastHeight(-1),
+    mResizeFlag(false), mLastAnimationTime(0.0), mVisible(false),
     mDfbWindowId(0)
-    { }
-    virtual ~pxWindowNative();
+  { }
 
-    // Contract between pxEventLoopNative and this class
-    static void runEventLoop();
-    static void exitEventLoop();
+  virtual ~pxWindowNative();
 
-    static struct wl_shell_surface_listener mShellSurfaceListener;
+  // Contract between pxEventLoopNative and this class
+  static void runEventLoop();
+  static void exitEventLoop();
 
-    static vector<pxWindowNative*> getNativeWindows(){return mWindowVector;}
+  static struct wl_shell_surface_listener mShellSurfaceListener;
 
-    virtual void onMouseDown(int x, int y, unsigned long flags) = 0;
-    virtual void onMouseUp(int x, int y, unsigned long flags) = 0;
+  static vector<pxWindowNative*> getNativeWindows(){return mWindowVector;}
 
-    virtual void onMouseMove(int x, int y) = 0;
+  virtual void onMouseDown(int32_t x, int32_t y, uint32_t flags) = 0;
+  virtual void onMouseUp(int32_t x, int32_t y, uint32_t flags) = 0;
 
-    virtual void onMouseLeave() = 0;
+  virtual void onMouseMove(int32_t x, int32_t y) = 0;
 
-    virtual void onKeyDown(int keycode, unsigned long flags) = 0;
-    virtual void onKeyUp(int keycode, unsigned long flags) = 0;
-    
-    virtual void onSize(int w, int h) = 0;
+  virtual void onMouseLeave() = 0;
 
-    void animateAndRender();
+  virtual void onKeyDown(uint32_t keycode, uint32_t flags) = 0;
+  virtual void onKeyUp(uint32_t keycode, uint32_t flags) = 0;
+  virtual void onChar(uint32_t c) = 0;
+
+  virtual void onSize(int w, int h) = 0;
+
+  void animateAndRender();
 
 protected:
-    virtual void onCreate() = 0;
+  virtual void onCreate() = 0;
 
-    virtual void onCloseRequest() = 0;
-    virtual void onClose() = 0;
+  virtual void onCloseRequest() = 0;
+  virtual void onClose() = 0;
 
-    virtual void onDraw(pxSurfaceNative surface) = 0;
+  virtual void onDraw(pxSurfaceNative surface) = 0;
 
-    virtual void onAnimationTimer() = 0;	
+  virtual void onAnimationTimer() = 0;
 
-    void onAnimationTimerInternal();
+  void onAnimationTimerInternal();
 
-    void invalidateRectInternal(pxRect *r);
-    double getLastAnimationTime();
-    void setLastAnimationTime(double time);
-    void drawFrame();
+  void invalidateRectInternal(pxRect *r);
+  double getLastAnimationTime();
+  void setLastAnimationTime(double time);
+  void drawFrame();
 
-    displayRef mDisplayRef;
 
-    int    mTimerFPS;
+  displayRef mDisplayRef;
 
-    int    mLastWidth;
-    int    mLastHeight;
+  int mTimerFPS;
+  int mLastWidth, mLastHeight;
+  bool mResizeFlag;
+  double mLastAnimationTime;
+  bool mVisible;
 
-    bool   mResizeFlag;
-    double mLastAnimationTime;
-    bool   mVisible;
-    
-    //timer variables
-    static bool    mEventLoopTimerStarted;
-    static float   mEventLoopInterval;
-    static timer_t mRenderTimerId;
-    
-    void createDfbWindow(int left, int top, int width, int height);
-    void cleanupDfbWindow();
-    
-    int mDfbWindowId;
+  //timer variables
+  static bool mEventLoopTimerStarted;
+  static float mEventLoopInterval;
+  static timer_t mRenderTimerId;
 
-    static void registerWindow(pxWindowNative* p);
-    static void unregisterWindow(pxWindowNative* p); //call this method somewhere
-    static vector<pxWindowNative*> mWindowVector;
+  void createDfbWindow(int left, int top, int width, int height);
+  void cleanupDfbWindow();
+
+  int mDfbWindowId;
+
+  static void registerWindow(pxWindowNative* p);
+  static void unregisterWindow(pxWindowNative* p); //call this method somewhere
+  static vector<pxWindowNative*> mWindowVector;
 };
 
 // Key Codes

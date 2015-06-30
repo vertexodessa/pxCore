@@ -54,7 +54,7 @@ void onTimer(int /*v*/) {
   glutTimerFunc(16, onTimer, 0);
 }
 
-void onMouse(int button, int state, int x, int y) {
+void onMouse(int32_t button, uint32_t state, int32_t x, int32_t y) {
   printf("mouse, ");
   switch(button) {
   case GLUT_LEFT_BUTTON:
@@ -87,17 +87,17 @@ void onMouse(int button, int state, int x, int y) {
   printf("\n");
 }
 
-void onMouseMotion(int x, int y) {
+void onMouseMotion(int32_t x, int32_t y) {
   //  printf("onMouseMotion x: %d y: %d\n", x, y);
   scene->onMouseMove(x,y);
 }
 
-void onMousePassiveMotion(int x, int y) {
+void onMousePassiveMotion(int32_t x, int32_t y) {
   //printf("onMousePassiveMotion x: %d y: %d\n", x, y);
   scene->onMouseMove(x, y);
 }
 
-void onKeyboard(unsigned char key, int /*x*/, int /*y*/)
+void onKeyboard(unsigned char key, int32_t /*x*/, int32_t /*y*/)
 {
   // Ugh GLUT key support not so hot.. 
   char unmodifiedKey = (char)key;
@@ -111,7 +111,7 @@ void onKeyboard(unsigned char key, int /*x*/, int /*y*/)
   scene->onChar(unmodifiedKey);
 }
 
-void onSpecial(int key, int /*x*/, int /*y*/)
+void onSpecial(int32_t key, int32_t /*x*/, int32_t /*y*/)
 {
   int keycode = key;
   switch (key)

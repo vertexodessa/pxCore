@@ -1,3 +1,7 @@
+// pxCore CopyRight 2007-2015 John Robinson
+// Portable Framebuffer and Windowing Library
+// pxWindowUtil.cpp
+
 #include <stdio.h>
 
 #include "pxWindowUtil.h"
@@ -5,7 +9,7 @@
 #include "pxKeycodes.h"
 #include <stdio.h>
 
-int keycodeFromNative(int nativeKeycode)
+uint32_t keycodeFromNative(uint32_t nativeKeycode)
 {
   int commonKeycode = 0;
   switch (nativeKeycode)

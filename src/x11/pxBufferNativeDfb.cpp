@@ -3,11 +3,12 @@
 // pxBufferNative.cpp
 
 #include "../pxCore.h"
-#include "pxBufferNativeDfb.h"
 #include "../pxRect.h"
-
 #include "../pxOffscreen.h"
 
+#include "pxBufferNativeDfb.h"
+
+extern DFBSurfacePixelFormat  dfbPixelformat;
 
 //---------------------------------------------------------------
 #define DFB_CHECK(x...)                                   \
@@ -56,7 +57,7 @@ void pxBuffer::blit(pxSurfaceNative s, int dstLeft, int dstTop,
   dsc.flags  = (DFBSurfaceDescriptionFlags) (DSDESC_HEIGHT | DSDESC_WIDTH | DSDESC_PREALLOCATED | DSDESC_PIXELFORMAT);
   dsc.caps   = DSCAPS_NONE;
 
-  dsc.pixelformat           = DSPF_ABGR;
+  dsc.pixelformat           = dfbPixelformat;
   dsc.preallocated[0].data  = base();      // Buffer is your data
   dsc.preallocated[0].pitch = width()*4;
   dsc.preallocated[1].data  = NULL;
@@ -85,7 +86,7 @@ void pxBuffer::blit(pxSurfaceNative s, int dstLeft, int dstTop,
 
  // DFB_CHECK (s->surface->Blit(s->surface, image, NULL, dstLeft, dstTop));
 
-  printf("pxBuffer::blit()");
+ // printf("pxBuffer::blit()");
 
   DFB_CHECK (s->surface->StretchBlit(s->surface, image, &rcSrc, &rcDst));
 

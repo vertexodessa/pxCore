@@ -10,7 +10,7 @@ LIBDIR= -L/usr/lib/x86_64-linux-gnu -L/usr/local/lib/
 all: $(OUTDIR)/Animation
 
 $(OUTDIR)/Animation: Animation.cpp
-	g++ -o $(OUTDIR)/Animation_dfb -Wall $(CFLAGS) Animation.cpp -L$(LIBDIR) -L$(OUTDIR) -lX11 -lpxCore -lrt -ldirectfb
+	g++ -o $(OUTDIR)/Animation_dfb -Wall $(CFLAGS) Animation.cpp -L$(LIBDIR) -L$(OUTDIR) -lX11 -lpxCore -lrt -ldirectfb -lpthread
 
 
 

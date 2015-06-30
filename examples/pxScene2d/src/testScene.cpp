@@ -11,7 +11,11 @@
 
 #include "pxInterpolators.h"
 
-pxScene2dRef scene = new pxScene2d;
+
+#define USE_BG
+#define USE_BG_RADIAL
+#define USE_TEXT
+#define USE_PICTURE
 
 #if 0
 
@@ -191,7 +195,7 @@ void testScene() {
 }
 
 
-#else
+#endif
 
 #if 0
 void fancy(void* ctx);
@@ -257,6 +261,8 @@ void scale3(void*ctx) {
 }
 #endif
 
+
+#if 0
 void ballScene() 
 {
   
@@ -297,29 +303,41 @@ void ballScene()
 //  fancy((pxObject*)p);
 }
 
+#endif
+
+
+#if 1
+#ifdef USE_BG
 rtObjectRef bg1;
+#endif
+
+#ifdef USE_BG_RADIAL
 rtObjectRef bg2;
+#endif
+
+#ifdef USE_PICTURE
 rtObjectRef picture;
 rtString bananaURL;
 rtString ballURL;
+#endif
 
 rtError onSizeCB(int numArgs, const rtValue* args, rtValue* /*result*/, void* /*context*/)
 {
   if (numArgs == 2)
   {
-    int w = args[0].toInt32();
-    int h = args[1].toInt32();
+    rtObjectRef e = args[0].toObject();
+    int w = e.get<uint32_t>("w");
+    int h = e.get<uint32_t>("h");
 
-    if(bg1.getPtr())
-    {
-      bg1.set("w", w);
-      bg1.set("h", h);
-    }
-    if(bg2.getPtr())
-    {
-      bg2.set("w", w);
-      bg2.set("h", h);
-    }
+#ifdef USE_BG
+    bg1.set("w", w);
+    bg1.set("h", h);
+#endif
+
+#ifdef USE_BG_RADIAL
+    bg2.set("w", w);
+    bg2.set("h", h);
+#endif
   }
   return RT_OK;
 }
@@ -329,19 +347,24 @@ rtError onKeyDownCB(int numArgs, const rtValue* args, rtValue* /*result*/, void*
 
   if (numArgs >0)
   {
-    printf("\n ####################### onKeyDownCB()  keyCode = %d",args[0].toInt32());
 
-    switch(args[0].toInt32())
+    rtObjectRef e = args[0].toObject();
+    uint32_t keyCode = e.get<uint32_t>("keyCode");
+    printf("received keyCode %d\n", keyCode);
+
+#ifdef USE_PICTURE
+    switch(keyCode) 
     {
-
-    case PX_KEY_NATIVE_ONE: //PX_KEY_ONE:  // '1'
+    case PX_KEY_ONE: // '1'
+      printf("banana\n");
       picture.set("url", bananaURL);
 
       printf("\n ####################### bananaURL");
 
       break;
 
-    case PX_KEY_NATIVE_TWO: //PX_KEY_TWO: // '2'
+    case PX_KEY_TWO: // '2'
+      printf("ball\n");
       picture.set("url", ballURL);
 
       printf("\n ####################### ballURL");
@@ -351,6 +374,8 @@ rtError onKeyDownCB(int numArgs, const rtValue* args, rtValue* /*result*/, void*
       rtLogWarn("unhandled key");
       break;
     }
+#endif
+
   }
   return RT_OK;
 }
@@ -359,24 +384,28 @@ void testScene()
 {
   rtLogSetLevel(RT_LOG_DEBUG);
 
+  pxScene2dRef scene = new pxScene2d;
+
   rtString d;
+  rtString bgURL;
   rtGetCurrentDirectory(d);
+
+#ifdef USE_PICTURE
+
   bananaURL = d;
   ballURL   = d;
   bananaURL.append("/../images/banana.png");
   ballURL.append("/../images/ball.png");
-
+#endif
 
   scene->init();
 
   rtObjectRef root = scene.get<rtObjectRef>("root");  
 
-  scene.send("on", "keydown", new rtFunctionCallback(onKeyDownCB));
-//  scene.send("on", "resize", new rtFunctionCallback(onSizeCB));
+  root.send("on",  "onKeyDown", new rtFunctionCallback(onKeyDownCB));
+  scene.send("on", "onResize",  new rtFunctionCallback(onSizeCB));
 
-
-#if 1
-  rtString bgURL;
+#ifdef USE_BG
   scene.sendReturns<rtObjectRef>("createImage", bg1);
   bgURL = d;
   bgURL.append("/../images/skulls.png");
@@ -390,6 +419,16 @@ void testScene()
 
 
 #if 0
+  printf("Try enumerating properties on image.\n");
+  rtObjectRef keys = bg1.get<rtObjectRef>("allKeys");
+  uint32_t length = keys.get<uint32_t>("length");
+  for (uint32_t i = 0; i < length; i++)
+  {
+    printf("i: %d key: %s\n", i, keys.get<rtString>(i).cString());
+  }
+#endif
+
+#ifdef USE_BG_RADIAL
   scene.sendReturns<rtObjectRef>("createImage", bg2);
   bgURL = d;
   bgURL.append("/../images/radial_gradient.png");
@@ -401,28 +440,7 @@ void testScene()
   bg2.set("h", scene->h());
 #endif
 
-#if 0
-  printf("Try enumerating properties on image.\n");
-
-
-  rtObjectRef keys = bg1.get<rtObjectRef>("allKeys");
-  uint32_t length = keys.get<uint32_t>("length");
-  for (uint32_t i = 0; i < length; i++)
-  {
-    printf("i: %d key: %s\n", i, keys.get<rtString>(i).cString());
-  }
-#endif
-
-
-  scene.sendReturns<rtObjectRef>("createImage", picture);
-  picture.set("x", 400);
-  picture.set("y", 400);
-  // TODO animateTo now takes a property bag of properties and targets too lazy to fix this call right now
-  //  picture.send("animateTo", "r", 360, 0.5, 0, 1);
-  picture.set("parent", root);
-
-
-#if 0
+#ifdef USE_TEXT
   rtObjectRef t;
   scene.sendReturns<rtObjectRef>("createText", t);
   t.set("text", "Choose Picture:\n"
@@ -432,7 +450,25 @@ void testScene()
   t.set("y", 100);
   t.set("parent", root);
 
+#endif
 
+#ifdef USE_PICTURE
+  scene.sendReturns<rtObjectRef>("createImage", picture);
+  picture.set("x", 400);
+  picture.set("y", 400);
+  // TODO animateTo now takes a property bag of properties and targets too lazy to fix this call right now
+  //  picture.send("animateTo", "r", 360, 0.5, 0, 1);
+  picture.set("parent", root);
+
+#ifndef USE_TEXT
+  picture.set("url", bananaURL);
+#endif
+
+  picture.set("url", ballURL);
+#endif
+
+
+#if 0
 
   printf("Enumerate children of root object\n");
   rtObjectRef c = root.get<rtObjectRef>("children");
@@ -450,6 +486,7 @@ void testScene()
 
 #endif //00
 
+//  return scene.getPtr();
 }
 
 #endif

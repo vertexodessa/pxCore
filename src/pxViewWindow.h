@@ -1,3 +1,7 @@
+// pxCore CopyRight 2007-2015 John Robinson
+// Portable Framebuffer and Windowing Library
+// pxViewWindow.h
+
 #ifndef PX_VIEWWINDOW_H
 #define PX_VIEWWINDOW_H
 
@@ -21,16 +25,15 @@ protected:
     virtual void RT_STDCALL invalidateRect(pxRect* r);
 
     // The following methods are delegated to the view
-    virtual void onSize(int w, int h);
-    virtual void onMouseDown(int x, int y, unsigned long flags);
-    virtual void onMouseUp(int x, int y, unsigned long flags);
+    virtual void onSize(int32_t w, int32_t h);
+    virtual void onMouseDown(int32_t x, int32_t y, uint32_t flags);
+    virtual void onMouseUp(int32_t x, int32_t y, uint32_t flags);
     virtual void onMouseLeave();
-    virtual void onMouseMove(int x, int y);
+    virtual void onMouseMove(int32_t x, int32_t y);
 
-#if 0
-    virtual void onKeyDown(int keycode, unsigned long flags);
-    virtual void onKeyUp(int keycode, unsigned long flags);
-#endif
+    virtual void onKeyDown(uint32_t keycode, uint32_t flags);
+    virtual void onKeyUp(uint32_t keycode, uint32_t flags);
+    virtual void onChar(uint32_t codepoint);
 
     virtual void onDraw(pxSurfaceNative s);
 

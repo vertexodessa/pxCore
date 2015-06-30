@@ -60,15 +60,40 @@
         "-lcurl",
         "-ldl",
         "-ldirectfb"
-#        "-lGL",
 #        "-lrt",
       ],
 
+  "conditions": [
+    ['OS=="mac"', {'libraries': [
+#            "-framework GLUT",
+#            "-framework OpenGL",
+            "../../../external/jpg/.libs/libjpeg.a",
+            ]}],
+    ['OS!="mac"', {'libraries': [
+            "-lglut",
+#            "-lGL",
+#            "-lGLEW",
+            "-ljpeg",
+            ]}],
+            ],
+
+      "defines": [
+        "RT_PLATFORM_LINUX",
+        "PX_PLATFORM_GENERIC_DFB"
+        "ENABLE_DFB",
+
+      ],
+
+      'cflags!': [
+        "-Wno-unused-parameter"
+      ],
+
       "cflags": [
-        "-DPX_PLATFORM_X11",
-        "-DRT_PLATFORM_LINUX",
-        "-DENABLE_GLUT",
-        "-Wno-attributes"
+        "-DPX_PLATFORM_GENERIC_DFB",
+        "-DENABLE_DFB",
+        "-Wno-attributes",
+        "-Wall",
+        "-Wextra"
       ]
     }
   ]

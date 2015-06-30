@@ -400,23 +400,29 @@ char *u8_strchr(char *s, u_int32_t ch, int *charn)
 
 char *u8_memchr(char *s, u_int32_t ch, size_t sz, int *charn)
 {
-    int i = 0, lasti=0;
+    size_t i = 0, lasti=0;
     u_int32_t c;
     int csz;
 
     *charn = 0;
-    while (i < sz) {
+    while (i < sz)
+    {
         c = csz = 0;
-        do {
+        do
+        {
             c <<= 6;
             c += (unsigned char)s[i++];
             csz++;
-        } while (i < sz && !isutf(s[i]));
+        }
+        while (i < sz && !isutf(s[i]));
+
         c -= offsetsFromUTF8[csz-1];
 
-        if (c == ch) {
+        if (c == ch)
+        {
             return &s[lasti];
         }
+
         lasti = i;
         (*charn)++;
     }
