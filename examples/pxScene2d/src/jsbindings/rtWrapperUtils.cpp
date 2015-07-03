@@ -2,9 +2,62 @@
 #include "rtObjectWrapper.h"
 #include "rtFunctionWrapper.h"
 
-// #include <rtMutex.h> // non-recusrive
+#include <rtMutex.h>
 
-static pthread_mutex_t sSceneLock = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+static pthread_mutex_t sSceneLock = PTHREAD_MUTEX_INITIALIZER;
+static rtMutex objectMapMutex;
+
+typedef std::map< rtIObject*, Persistent<Object>* > maptype_rt2v8;
+
+maptype_rt2v8 objectMap_rt2v8;
+
+void weakCallback_rt2v8(const WeakCallbackData<Object, rtIObject>& data)
+{
+  rtMutexLockGuard lock(objectMapMutex);
+  maptype_rt2v8::iterator itr = objectMap_rt2v8.find(data.GetParameter());
+  if (itr != objectMap_rt2v8.end())
+  {
+    Persistent<Object>* p = itr->second;
+    // TODO: Removing this temproarily until we understand how this callback works. I
+    // would have assumed that this is a weak persistent since we called SetWeak() on it
+    // before inserting it into the objectMap_rt2v8 map.
+    // assert(p->IsWeak());
+    //
+    if (!p->IsWeak())
+      rtLogWarn("TODO: Why isn't this handle weak?");
+    if (p)
+    {
+      p->Reset();
+      delete p;
+    }
+    objectMap_rt2v8.erase(itr);
+  }
+}
+
+void HandleMap::addWeakReference(Isolate* isolate, const rtObjectRef& from, Local<Object>& to)
+{
+  Persistent<Object>* h(new Persistent<Object>(isolate, to));
+  h->SetWeak(from.getPtr(), &weakCallback_rt2v8);
+
+  rtMutexLockGuard lock(objectMapMutex);
+  objectMap_rt2v8.insert(std::make_pair(from.getPtr(), h));
+}
+
+Local<Object> HandleMap::lookupSurrogate(v8::Isolate* isolate, const rtObjectRef& from)
+{
+  Local<Object> obj;
+
+  rtMutexLockGuard lock(objectMapMutex);
+  maptype_rt2v8::iterator itr = objectMap_rt2v8.find(from.getPtr());
+  if (itr != objectMap_rt2v8.end())
+  {
+    Persistent<Object>* p = itr->second;
+    if (p)
+      obj = PersistentToLocal(isolate, *p);
+  }
+
+  return obj;
+}
 
 void rtWrapperSceneUpdateEnter()
 {
@@ -18,59 +71,61 @@ void rtWrapperSceneUpdateExit()
 
 using namespace v8;
 
-Handle<Value> rt2js(const rtValue& v)
+Handle<Value> rt2js(Isolate* isolate, const rtValue& v)
 {
   switch (v.getType())
   {
     case RT_int32_tType:
       {
         int32_t i = v.toInt32();
-        return Integer::New(i);
+        return Integer::New(isolate, i);
       }
       break;
     case RT_uint32_tType:
       {
         uint32_t u = v.toUInt32();
-        return Integer::NewFromUnsigned(u);
+        return Integer::NewFromUnsigned(isolate, u);
       }
       break;
     case RT_int64_tType:
       {
         double d = v.toDouble();
-        return Number::New(d);
+        return Number::New(isolate, d);
       }
       break;
     case RT_floatType:
       {
         float f = v.toFloat();
-        return Number::New(f);
+        return Number::New(isolate, f);
       }
       break;
     case RT_doubleType:
       {
         double d = v.toDouble();
-        return Number::New(d);
+        return Number::New(isolate, d);
       }
       break;
     case RT_uint64_tType:
       {
         double d = v.toDouble();
-        return Number::New(d);
+        return Number::New(isolate, d);
       }
       break;
     case RT_functionType:
-      return rtFunctionWrapper::createFromFunctionReference(v.toFunction());
+      return rtFunctionWrapper::createFromFunctionReference(isolate, v.toFunction());
       break;
     case RT_rtObjectRefType:
-      return rtObjectWrapper::createFromObjectReference(v.toObject());
+      return jsObjectWrapper::isJavaScriptObjectWrapper(v.toObject())
+        ? static_cast<jsObjectWrapper *>(v.toObject().getPtr())->getWrappedObject()
+        : rtObjectWrapper::createFromObjectReference(isolate, v.toObject());
       break;
     case RT_boolType:
-      return Boolean::New(v.toBool());
+      return Boolean::New(isolate, v.toBool());
       break;
     case RT_rtStringType:
       {
         rtString s = v.toString();
-        return String::New(s.cString(), s.length());
+        return String::NewFromUtf8(isolate, s.cString());
       }
       break;
     case RT_voidPtrType:
@@ -86,17 +141,16 @@ Handle<Value> rt2js(const rtValue& v)
       break;
   }
 
-  return Undefined();
+  return Undefined(isolate);
 }
 
-rtValue js2rt(const Handle<Value>& val, rtWrapperError* error)
+rtValue js2rt(v8::Isolate* isolate, const Handle<Value>& val, rtWrapperError* )
 {
   if (val->IsUndefined()) { return rtValue((void *)0); }
   if (val->IsNull())      { return rtValue((char *)0); }
   if (val->IsString())    { return toString(val); }
-  if (val->IsArray())     { assert(false); return rtValue(0); } // TODO: rtValue support collections
-  if (val->IsFunction())  { return rtValue(rtFunctionRef(new jsFunctionWrapper(val))); }
-  if (val->IsObject())
+  if (val->IsFunction())  { return rtValue(rtFunctionRef(new jsFunctionWrapper(isolate, val))); }
+  if (val->IsArray() || val->IsObject())
   {
     // This is mostly a heuristic. We should probably set a second internal
     // field and use a uuid as a magic number to ensure this is one of our
@@ -113,7 +167,7 @@ rtValue js2rt(const Handle<Value>& val, rtWrapperError* error)
     {
       // this is a regular JS object. i.e. one that does not wrap an rtObject.
       // in this case, we'll provide the necessary adapter.
-      return rtValue(new jsObjectWrapper(obj->ToObject()));
+      return rtValue(new jsObjectWrapper(isolate, obj->ToObject(), val->IsArray()));
     }
   }
 

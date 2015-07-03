@@ -61,6 +61,7 @@ public:
   // Contract between pxEventLoopNative and this class
   static void runEventLoop();
   static void exitEventLoop();
+  static void runEventLoopOnce();
 
   static struct wl_shell_surface_listener mShellSurfaceListener;
 
@@ -80,6 +81,10 @@ public:
   virtual void onSize(int w, int h) = 0;
 
   void animateAndRender();
+
+  void blit(pxBuffer& b, int32_t dstLeft, int32_t dstTop,
+            int32_t dstWidth, int32_t dstHeight,
+            int32_t srcLeft, int32_t srcTop);
 
 protected:
   virtual void onCreate() = 0;
@@ -121,6 +126,7 @@ protected:
   static void unregisterWindow(pxWindowNative* p); //call this method somewhere
   static vector<pxWindowNative*> mWindowVector;
 };
+
 
 // Key Codes
 #define PX_KEY_NATIVE_ENTER        DIKI_ENTER
@@ -224,8 +230,8 @@ protected:
 #define PX_KEY_NATIVE_BACKQUOTE    DIKI_QUOTE_LEFT
 #define PX_KEY_NATIVE_QUOTE        DIKI_QUOTE_RIGHT
 
-#endif //PX_WINDOW_NATIVE_DFB_H
 
+#endif //PX_WINDOW_NATIVE_DFB_H
 
 /*
  DWET_NONE	 	0x00000000

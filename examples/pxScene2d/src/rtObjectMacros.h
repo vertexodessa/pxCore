@@ -134,10 +134,10 @@ int class::rtPropertyCount = sizeof(class::rtPropertyEntries)/sizeof(rtPropertyE
     rtError method##_thunk(int /*numArgs*/, const rtValue* /*args*/, rtValue& /*r*/){ return method(); }
 
 #define rtThunk1ArgAndNoReturn(method, arg1type) \
-    rtError method##_thunk(int numArgs, const rtValue* args, rtValue&){ if (numArgs < 1) return RT_ERROR_NOT_ENOUGH_ARGS; return method(args[0].convert<arg1type>()); }
+  rtError method##_thunk(int numArgs, const rtValue* args, rtValue&){ /*if (numArgs < 1) return RT_ERROR_NOT_ENOUGH_ARGS;*/ return method(rtGA(0).convert<arg1type>()); }
 
 #define rtThunk2ArgAndNoReturn(method, arg1type, arg2type) \
-    rtError method##_thunk(int numArgs, const rtValue* args, rtValue&){ if (numArgs < 2) return RT_ERROR_NOT_ENOUGH_ARGS; return method(args[0].convert<arg1type>(), args[1].convert<arg2type>()); }
+  rtError method##_thunk(int numArgs, const rtValue* args, rtValue&){/* if (numArgs < 2) return RT_ERROR_NOT_ENOUGH_ARGS;*/ return method(rtGA(0).convert<arg1type>(), rtGA(1).convert<arg2type>()); }
 
 #define rtThunk3ArgAndNoReturn(method, arg1type, arg2type, arg3type) \
     rtError method##_thunk(int numArgs, const rtValue* args, rtValue&){ if (numArgs < 3) return RT_ERROR_NOT_ENOUGH_ARGS; return method(args[0].convert<arg1type>(), args[1].convert<arg2type>(), args[2].convert<arg3type>()); }
@@ -171,7 +171,7 @@ int class::rtPropertyCount = sizeof(class::rtPropertyEntries)/sizeof(rtPropertyE
   rtError method##_thunk(int numArgs, const rtValue* args, rtValue& r){ /*if (numArgs < 1) return RT_ERROR_NOT_ENOUGH_ARGS;*/ returntype rv; rtError e =  method(rtGA(0).convert<arg1type>(), rv); r.assign<returntype>(rv); return e;}
 
 #define rtThunk2ArgAndReturn(method, arg1type, arg2type, returntype) \
-    rtError method##_thunk(int numArgs, const rtValue* args, rtValue& r){ if (numArgs < 2) return RT_ERROR_NOT_ENOUGH_ARGS; returntype rv; rtError e =  method(args[0].convert<arg1type>(), args[1].convert<arg2type>(), rv); r.assign<returntype>(rv); return e;}
+  rtError method##_thunk(int numArgs, const rtValue* args, rtValue& r){ /*if (numArgs < 2) return RT_ERROR_NOT_ENOUGH_ARGS;*/ returntype rv; rtError e =  method(rtGA(0).convert<arg1type>(), rtGA(1).convert<arg2type>(), rv); r.assign<returntype>(rv); return e;}
 
 #define rtThunk3ArgAndReturn(method, arg1type, arg2type, arg3type, returntype) \
     rtError method##_thunk(int numArgs, const rtValue* args, rtValue& r){ if (numArgs < 3) return RT_ERROR_NOT_ENOUGH_ARGS; returntype rv; rtError e =  method(args[0].convert<arg1type>(), args[1].convert<arg2type>(), args[2].convert<arg3type>(), rv); r.assign<returntype>(rv); return e;}
@@ -201,6 +201,8 @@ int class::rtPropertyCount = sizeof(class::rtPropertyEntries)/sizeof(rtPropertyE
 #define rtThunkReadOnlyProperty(getterMethod, propType) \
     rtError getterMethod##_PropGetterThunk(rtValue& v) const { propType pv;  rtError e = getterMethod(pv); v.assign<propType>(pv); return e;}
 
+#define rtThunkConstantProperty(getterMethod, k, propType)		\
+    rtError getterMethod##_PropGetterThunk(rtValue& v) const { v.assign<propType>(k); return RT_OK;}
 
 #define rtProperty(name, getMethod, setMethod, propType)\
     rtThunkProperty(getMethod, setMethod, propType); \
@@ -232,6 +234,24 @@ int class::rtPropertyCount = sizeof(class::rtPropertyEntries)/sizeof(rtPropertyE
             entry.mPropType = RT_##propType##Type; \
             entry.mSetThunk = (rtSetPropertyThunk)NULL; \
             entry.mGetThunk = (rtGetPropertyThunk)&PARENTTYPE__::getMethod##_PropGetterThunk; \
+            entry.mNext = tail; \
+        }\
+        rtPropertyEntry entry; \
+    };\
+    static name##PropEntry name##PropEntryInstance
+
+#define rtConstantProperty(name, k, propType)\
+    rtThunkConstantProperty(name, k, propType);		  \
+    class name##PropEntry \
+    { \
+    public: \
+        name##PropEntry() \
+        {\
+            rtPropertyEntry* tail = headProperty(&entry); \
+            entry.mPropertyName = "" #name ""; \
+            entry.mPropType = RT_##propType##Type; \
+            entry.mSetThunk = (rtSetPropertyThunk)NULL; \
+            entry.mGetThunk = (rtGetPropertyThunk)&PARENTTYPE__::name##_PropGetterThunk; \
             entry.mNext = tail; \
         }\
         rtPropertyEntry entry; \

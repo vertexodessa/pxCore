@@ -18,6 +18,12 @@
 class pxFace;
 typedef rtRefT<pxFace> pxFaceRef;
 
+class pxFileDownloadRequest;
+typedef struct _FontDownloadRequest
+{
+  pxFileDownloadRequest* fileDownloadRequest;
+} FontDownloadRequest;
+
 struct GlyphCacheEntry
 {
   int bitmap_left;
@@ -39,6 +45,7 @@ public:
   virtual ~pxFace();
   
   rtError init(const char* n);
+  rtError init(const FT_Byte*  fontData, FT_Long size, const char* n);
 
   virtual unsigned long AddRef() 
   {
@@ -76,7 +83,8 @@ public:
   rtProperty(pixelSize, pixelSize, setPixelSize, uint32_t);
   rtProperty(faceURL, faceURL, setFaceURL, rtString);
 
-  pxText();
+  pxText(pxScene2d* scene);
+  ~pxText();
   rtError text(rtString& s) const;
   rtError setText(const char* text);
 
@@ -85,12 +93,11 @@ public:
     return RT_OK;
   }
 
-  rtError setTextColor(uint32_t c)
-  {
-    mTextColor[0] = (float)((c>>24) & 0xff) / 255.0f;
-    mTextColor[1] = (float)((c>>16) & 0xff) / 255.0f;
-    mTextColor[2] = (float)((c>> 8) & 0xff) / 255.0f;
-    mTextColor[3] = (float)((c>> 0) & 0xff) / 255.0f;
+  rtError setTextColor(uint32_t c) {
+    mTextColor[0] = (float)((c>>24)&0xff)/255.0f;
+    mTextColor[1] = (float)((c>>16)&0xff)/255.0f;
+    mTextColor[2] = (float)((c>>8)&0xff)/255.0f;
+    mTextColor[3] = (float)((c>>0)&0xff)/255.0f;
     return RT_OK;
   }
 
@@ -100,6 +107,29 @@ public:
   rtError pixelSize(uint32_t& v) const { v = mPixelSize; return RT_OK; }
   rtError setPixelSize(uint32_t v);
 
+  virtual void update(double t);
+
+  virtual rtError Set(const char* name, const rtValue* value)
+  {
+#if 1
+    mDirty = mDirty || (!strcmp(name,"w") ||
+              !strcmp(name,"h") ||
+              !strcmp(name,"text") ||
+              !strcmp(name,"pixelSize") |
+              !strcmp(name,"faceURL") |
+              !strcmp(name,"textColor"));
+#else
+    mDirty = true;
+#endif
+    rtError e = pxObject::Set(name, value);
+    
+
+    return e;
+  }
+
+  void onFontDownloadComplete(FontDownloadRequest fontDownloadRequest);
+  static void checkForCompletedDownloads(int maxTimeInMilliseconds=10);
+
  protected:
   virtual void draw();
   rtString mText;
@@ -108,6 +138,9 @@ public:
   pxFaceRef mFace;
   float mTextColor[4];
   uint32_t mPixelSize;
+  bool mDirty;
+  pxContextFramebufferRef mCached;
+  pxFileDownloadRequest* mFontDownloadRequest;
 };
 
 #endif

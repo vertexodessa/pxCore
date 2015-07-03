@@ -1,20 +1,23 @@
+// pxCore CopyRight 2007-2015 John Robinson
+// Portable Framebuffer and Windowing Library
+// pxIView.h
+
 #ifndef PXIVIEW_H
 #define PXIVIEW_H
 
 #include "pxCore.h"
 #include "pxRect.h"
 
-//#include "rt.h"
 #include "rtRefPtr.h"
 
-// A pxIViewListener must unregister itself
+// A pxIViewContainer must unregister itself
 // upon being destroyed
-class pxIViewListener
+class pxIViewContainer
 {
 public:    
-    // In view coordinates on pixel boundaries
+  // In view coordinates on pixel boundaries
   // NULL means invalidate everything
-    virtual void RT_STDCALL invalidateRect(pxRect* r) = 0;
+  virtual void RT_STDCALL invalidateRect(pxRect* r) = 0;
 };
 
 // TODO no way to have a scene draw to an arbitrary rectangle
@@ -44,10 +47,8 @@ public:
 
   virtual void RT_STDCALL onDraw(/*pxBuffer& b, pxRect* r*/) = 0;
 
-//  virtual void RT_STDCALL setViewContainer(pxIViewContainer* l) = 0;
+  virtual void RT_STDCALL setViewContainer(pxIViewContainer* l) = 0;
 
-  virtual void RT_STDCALL addListener(pxIViewListener* listener) = 0;
-  virtual void RT_STDCALL removeListener(pxIViewListener* listener) = 0;
 #if 0
   virtual rtError RT_STDCALL setURI(const char* s) = 0;
 #endif

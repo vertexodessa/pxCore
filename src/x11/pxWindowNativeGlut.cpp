@@ -57,7 +57,7 @@ void onTimer(int v)
 {
   display();
   // schedule next timer event
-  glutTimerFunc(16, onTimer, 0);
+  glutTimerFunc(10, onTimer, 0);
 }
 
 void onMouse(int button, int state, int x, int y)
@@ -140,6 +140,8 @@ void onKeyboard(unsigned char key, int x, int y)
 
 void onKeyboardSpecial(int key, int x, int y)
 {
+   (void) x; (void) y;
+
   int keycode = key;
   switch (key)
   {
@@ -219,6 +221,20 @@ void onKeyboardSpecial(int key, int x, int y)
     w->onKeyDown(keycodeFromNative((int)keycode), 0);
     w->onKeyUp(keycodeFromNative((int)keycode), 0);
   }
+}
+
+void onEntry(int state)
+{
+  vector<pxWindowNative*> windowVector = pxWindow::getNativeWindows();
+  vector<pxWindowNative*>::iterator i;
+
+  for (i = windowVector.begin(); i < windowVector.end(); i++)
+  {
+    pxWindowNative* w = (*i);
+    if (state == GLUT_LEFT)
+      w->onMouseLeave();
+  }
+
 }
 
 //end glut callbacks
@@ -335,6 +351,7 @@ pxError pxWindow::init(int left, int top, int width, int height)
     glutPassiveMotionFunc(onMousePassiveMotion);
     glutKeyboardFunc(onKeyboard);
     glutSpecialFunc(onKeyboardSpecial);
+    glutEntryFunc(onEntry);
 
     registerWindow(this);
     this->onCreate();
@@ -605,4 +622,3 @@ int getRawNativeKeycodeFromGlut(int key, int modifiers)
   
   return rawKeycode;
 }
->>>>>>> Stashed changes

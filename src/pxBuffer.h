@@ -5,7 +5,7 @@
 #ifndef PX_BUFFER_H
 #define PX_BUFFER_H
 
-#include "pxColors.h"
+#include "pxColor.h"
 #include "pxRect.h"
 #include "pxCore.h"
 

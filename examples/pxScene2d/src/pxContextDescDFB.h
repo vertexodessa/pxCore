@@ -3,17 +3,21 @@
 
 #include <directfb.h>
 
-typedef struct
+typedef struct _pxContextSurfaceNativeDesc
 {
-  DFBSurfaceDescription dsc;
+   _pxContextSurfaceNativeDesc() : framebuffer(0), texture(0),
+      width(0), height(0),previousContextSurface(NULL) {}
 
-  IDirectFBSurface      *surface;
+   DFBSurfaceDescription dsc;
 
-//  GLuint framebuffer;
-//  GLuint texture;
+//   IDirectFBSurface      *surface;
 
-  int width;
-  int height;
+   IDirectFBSurface      *framebuffer;
+   IDirectFBSurface      *texture;
+
+   int width;
+   int height;
+  _pxContextSurfaceNativeDesc* previousContextSurface;
 }
 pxContextSurfaceNativeDesc;
 

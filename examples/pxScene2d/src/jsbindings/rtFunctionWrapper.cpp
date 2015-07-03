@@ -7,6 +7,112 @@
 static const char* kClassName = "Function";
 static Persistent<Function> ctor;
 
+class ResolverFunction : public rtAbstractFunction
+{
+public:
+  enum Disposition
+  {
+    DispositionResolve,
+    DispositionReject
+  };
+
+  ResolverFunction(Disposition disp, Isolate* isolate, Local<Promise::Resolver>& resolver)
+    : rtAbstractFunction()
+    , mDisposition(disp)
+    , mResolver(isolate, resolver)
+    , mIsolate(isolate)
+  {
+  }
+
+  virtual ~ResolverFunction()
+  {
+    rtLogInfo("delete");
+  }
+
+  virtual rtError Send(int numArgs, const rtValue* args, rtValue* /*result*/)
+  {
+    AsyncContext* ctx = new AsyncContext();
+
+    // keep current object alive while we enqueue this request
+    ctx->resolverFunc = rtFunctionRef(this);
+
+    for (int i = 0; i < numArgs; ++i)
+      ctx->args.push_back(args[i]);
+
+    mReq.data = ctx;
+    uv_queue_work(uv_default_loop(), &mReq, &workCallback, &afterWorkCallback);
+    return RT_OK;
+  }
+
+private:
+  struct AsyncContext
+  {
+    rtFunctionRef resolverFunc;
+    std::vector<rtValue> args;
+  };
+
+  static void workCallback(uv_work_t* /*req */)
+  {
+    // empty
+  }
+
+  static void afterWorkCallback(uv_work_t* req, int /* status */)
+  {
+    AsyncContext* ctx = reinterpret_cast<AsyncContext*>(req->data);
+    ResolverFunction* resolverFunc = static_cast<ResolverFunction *>(ctx->resolverFunc.getPtr());
+
+    assert(ctx->args.size() < 2);
+    assert(Isolate::GetCurrent() == resolverFunc->mIsolate);
+
+    // Locker locker(resolverFunc->mIsolate);
+    HandleScope scope(resolverFunc->mIsolate);
+    // Context::Scope contextScope(PersistentToLocal(resolverFunc->mIsolate, resolverFunc->mContext));
+
+    Handle<Value> value;
+    if (ctx->args.size() > 0)
+      value = rt2js(resolverFunc->mIsolate, ctx->args[0]);
+
+    Local<Promise::Resolver> resolver = PersistentToLocal(resolverFunc->mIsolate, resolverFunc->mResolver);
+
+    TryCatch tryCatch;
+    if (resolverFunc->mDisposition == DispositionResolve)
+      resolver->Resolve(value);
+    else
+      resolver->Reject(value);
+
+    if (tryCatch.HasCaught())
+    {
+      String::Utf8Value trace(tryCatch.StackTrace());
+      rtLogWarn("Error resolving promise");
+      rtLogWarn("%s", *trace);
+    }
+
+    resolverFunc->mIsolate->RunMicrotasks();
+
+    delete ctx;
+  }
+
+private:
+  Disposition mDisposition;
+  Persistent<Promise::Resolver> mResolver;
+  Isolate* mIsolate;
+  uv_work_t mReq;
+};
+
+static bool isPromise(const rtValue& v)
+{
+  if (v.getType() != RT_rtObjectRefType)
+    return false;
+
+  rtObjectRef ref = v.toObject();
+  if (!ref)
+    return false;
+
+  rtString desc;
+  rtError err = ref.sendReturns<rtString>("description", desc);
+  return err == RT_OK && strcmp(desc.cString(), "rtPromise") == 0;
+}
+
 rtFunctionWrapper::rtFunctionWrapper(const rtFunctionRef& ref)
   : rtWrapper(ref)
 {
@@ -16,83 +122,104 @@ rtFunctionWrapper::~rtFunctionWrapper()
 {
 }
 
-void rtFunctionWrapper::exportPrototype(Handle<Object> exports)
+void rtFunctionWrapper::exportPrototype(Isolate* isolate, Handle<Object> exports)
 {
-  Local<FunctionTemplate> tmpl = FunctionTemplate::New(create);
-  tmpl->SetClassName(String::NewSymbol(kClassName));
-
-  // Local<Template> proto = tmpl->PrototypeTemplate();
+  Local<FunctionTemplate> tmpl = FunctionTemplate::New(isolate, create);
+  tmpl->SetClassName(String::NewFromUtf8(isolate, kClassName));
 
   Local<ObjectTemplate> inst = tmpl->InstanceTemplate();
   inst->SetInternalFieldCount(1);
   inst->SetCallAsFunctionHandler(call);
 
-  ctor = Persistent<Function>::New(tmpl->GetFunction());
-  exports->Set(String::NewSymbol(kClassName), ctor);
+  ctor.Reset(isolate, tmpl->GetFunction());
+  exports->Set(String::NewFromUtf8(isolate, kClassName), tmpl->GetFunction());
 }
 
-Handle<Value> rtFunctionWrapper::create(const Arguments& args)
+void rtFunctionWrapper::create(const FunctionCallbackInfo<Value>& args)
 { 
-  if (args.IsConstructCall())
-  {
-    rtIFunction* p = reinterpret_cast<rtIFunction *>(Local<External>::Cast(args[0])->Value());
-    rtFunctionWrapper* wrapper = new rtFunctionWrapper(p);
-    wrapper->Wrap(args.This());
-    return args.This();
-  }
-  else
-  {
-    const int argc = 1;
+  assert(args.IsConstructCall());
 
-    HandleScope scope;
-    Local<Value> argv[argc] = { args[0] };
-    return scope.Close(ctor->NewInstance(argc, argv));
-  }
+  HandleScope scope(args.GetIsolate());
+  rtIFunction* func = static_cast<rtIFunction *>(args[0].As<External>()->Value());
+  rtFunctionWrapper* wrapper = new rtFunctionWrapper(func);
+  wrapper->Wrap(args.This());
 }
 
-Handle<Object> rtFunctionWrapper::createFromFunctionReference(const rtFunctionRef& func)
+Handle<Object> rtFunctionWrapper::createFromFunctionReference(Isolate* isolate, const rtFunctionRef& func)
 {
-  HandleScope scope;
-  Local<Value> argv[1] = { External::New(func.getPtr()) };
-  Local<Object> obj = ctor->NewInstance(1, argv);
-  return scope.Close(obj);
+  EscapableHandleScope scope(isolate);
+  Local<Value> argv[1] = 
+  {
+    External::New(isolate, func.getPtr()) 
+  };
+  Local<Function> c = PersistentToLocal(isolate, ctor);
+  return scope.Escape(c->NewInstance(1, argv));
 }
 
-Handle<Value> rtFunctionWrapper::call(const Arguments& args)
+void rtFunctionWrapper::call(const FunctionCallbackInfo<Value>& args)
 {
-  HandleScope scope;
+  Isolate* isolate = args.GetIsolate();
+
+  HandleScope scope(isolate);
 
   rtWrapperError error;
 
   std::vector<rtValue> argList;
   for (int i = 0; i < args.Length(); ++i)
   {
-    argList.push_back(js2rt(args[i], &error));
+    argList.push_back(js2rt(isolate, args[i], &error));
     if (error.hasError())
-      return ThrowException(error.toTypeError());
+      isolate->ThrowException(error.toTypeError(isolate));
   }
 
   rtValue result;
   rtWrapperSceneUpdateEnter();
   rtError err = unwrap(args)->Send(args.Length(), &argList[0], &result);
-  rtWrapperSceneUpdateExit();
-  if (err != RT_OK)
-    return throwRtError(err, "failed to invoke function");
 
-  return scope.Close(rt2js(result));
+  if (err != RT_OK)
+  {
+    rtWrapperSceneUpdateExit();
+    return throwRtError(isolate, err, "failed to invoke function");
+  }
+
+  if (isPromise(result))
+  {
+    Local<Promise::Resolver> resolver = Promise::Resolver::New(isolate);
+
+    rtFunctionRef resolve(new ResolverFunction(ResolverFunction::DispositionResolve, isolate, resolver));
+    rtFunctionRef reject(new ResolverFunction(ResolverFunction::DispositionReject, isolate, resolver));
+    rtObjectRef newPromise;
+
+    rtObjectRef promise = result.toObject();
+    rtError err = promise.send("then", resolve, reject, newPromise);
+
+    // must hold this lock to prevent promise from resolving internally before we
+    // actually register our function callbacks.
+    rtWrapperSceneUpdateExit();
+
+    if (err != RT_OK)
+      return throwRtError(isolate, err, "failed to register for promise callback");
+    else
+      args.GetReturnValue().Set(resolver->GetPromise());
+  }
+  else
+  {
+    rtWrapperSceneUpdateExit();
+    args.GetReturnValue().Set(rt2js(isolate, result));
+  }
 }
 
-
-jsFunctionWrapper::jsFunctionWrapper(const Handle<Value>& val)
+jsFunctionWrapper::jsFunctionWrapper(Isolate* isolate, const Handle<Value>& val)
   : mRefCount(0)
+  , mFunction(isolate, Handle<Function>::Cast(val))
+  , mIsolate(isolate)
 {
   assert(val->IsFunction());
-  mFunction = Persistent<Function>::New(Handle<Function>::Cast(val));
 }
 
 jsFunctionWrapper::~jsFunctionWrapper()
 {
-  mFunction.Dispose();
+
 }
 
 unsigned long jsFunctionWrapper::AddRef()
@@ -137,7 +264,7 @@ rtError jsFunctionWrapper::Send(int numArgs, const rtValue* args, rtValue* resul
   //    return true; // <-- Can't do this
   // });
   //
-  jsCallback* callback = jsCallback::create();
+  jsCallback* callback = jsCallback::create(mIsolate);
   for (int i = 0; i < numArgs; ++i)
     callback->addArg(args[i]);
   callback->setFunctionLookup(new FunctionLookup(this));
@@ -150,8 +277,8 @@ rtError jsFunctionWrapper::Send(int numArgs, const rtValue* args, rtValue* resul
   return RT_OK;
 }
 
-Persistent<Function> jsFunctionWrapper::FunctionLookup::lookup()
+Local<Function> jsFunctionWrapper::FunctionLookup::lookup()
 {
-  return mParent->mFunction;
+  return PersistentToLocal(mParent->mIsolate, mParent->mFunction);
 }
 

@@ -4,6 +4,7 @@
 #include "pxCore.h"
 #include "rtRefT.h"
 #include "pxOffscreen.h"
+#include "rtAtomic.h"
 
 enum pxTextureType { 
   PX_TEXTURE_UNKNOWN = 0,
@@ -13,27 +14,51 @@ enum pxTextureType {
   PX_TEXTURE_FRAME_BUFFER = 4
 };
 
-class pxTexture
+
+class pxTextureNative
 {
 public:
-  pxTexture() : mRef(0), mTextureType(PX_TEXTURE_UNKNOWN) {}
+  virtual pxError bindGLTexture(int tLoc) = 0;
+  virtual pxError bindGLTextureAsMask(int mLoc) = 0;
+};
+
+
+class pxTexture: public pxTextureNative
+{
+public:
+  pxTexture() : mRef(0), mTextureType(PX_TEXTURE_UNKNOWN), mPremultipliedAlpha(false)
+  {}
   virtual ~pxTexture() {}
-  virtual unsigned long AddRef() { return ++mRef; }
-  virtual unsigned long Release() { if (--mRef == 0) delete this; return mRef; }
+
+  virtual unsigned long AddRef()
+  {
+    return rtAtomicInc(&mRef);
+  }
+
+  virtual unsigned long Release()
+  {
+    unsigned long l = rtAtomicDec(&mRef);
+    if (l == 0)
+      delete this;
+    return l;
+  }
   
-  virtual pxError bindTexture() = 0;
-  virtual pxError bindTextureAsMask() = 0;
+  virtual pxError bindTexture()       { return PX_FAIL; }
+  virtual pxError bindTextureAsMask() { return PX_FAIL; }
   virtual pxError deleteTexture() = 0;
-  virtual float width() = 0;
-  virtual float height() = 0;
+  virtual int width()  = 0;
+  virtual int height() = 0;
   virtual pxError resizeTexture(int w, int h) { (void)w; (void)h; return PX_FAIL; }
   virtual pxError getOffscreen(pxOffscreen& o) = 0;
-  pxTextureType getType() { return mTextureType; }
-  virtual pxError prepareForRendering() { return PX_OK; }
+  pxTextureType getType()                    { return mTextureType; }
+  virtual pxError prepareForRendering()      { return PX_OK; }
+  bool premultipliedAlpha()                  { return mPremultipliedAlpha; }
+  void enablePremultipliedAlpha(bool enable) { mPremultipliedAlpha = enable; }
   
 protected:
-  unsigned long mRef;
+  rtAtomic mRef;
   pxTextureType mTextureType;
+  bool mPremultipliedAlpha;
 };
 
 typedef rtRefT<pxTexture> pxTextureRef;

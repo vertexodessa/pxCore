@@ -6,7 +6,7 @@ function updateSize(w, h) {
     bg.h = h;
 }
 
-scene.on("resize", updateSize);
+scene.on("onResize", function(e){updateSize(e.w,e.h);});
 updateSize(scene.w, scene.h);
 
 // null or "" is the default face FreeSans.ttf
@@ -29,38 +29,6 @@ var faces = ["",
              "FontdinerSwanky.ttf",
              "IndieFlower.ttf",
              "PoiretOne-Regular.ttf",
-             "DancingScript-Bold.ttf",
-             "Pacifico.ttf",
-             "FontdinerSwanky.ttf",
-             "IndieFlower.ttf",
-             "PoiretOne-Regular.ttf",
-             "DancingScript-Bold.ttf",
-             "Pacifico.ttf",
-             "FontdinerSwanky.ttf",
-             "IndieFlower.ttf",
-             "PoiretOne-Regular.ttf",
-             "DancingScript-Bold.ttf",
-             "Pacifico.ttf",
-             "FontdinerSwanky.ttf",
-             "IndieFlower.ttf",
-             "PoiretOne-Regular.ttf",
-             "DancingScript-Bold.ttf",
-             "Pacifico.ttf",
-             "FontdinerSwanky.ttf",
-             "IndieFlower.ttf",
-             "PoiretOne-Regular.ttf",
-             "DancingScript-Bold.ttf",
-             "Pacifico.ttf",
-             "FontdinerSwanky.ttf",
-             "IndieFlower.ttf",
-             "PoiretOne-Regular.ttf",
-             "DancingScript-Bold.ttf",
-             "Pacifico.ttf",
-             "FontdinerSwanky.ttf",
-             "IndieFlower.ttf",
-             "PoiretOne-Regular.ttf",
-             "DancingScript-Bold.ttf",
-             "Pacifico.ttf",
             ];
 
 console.log("faces: ", faces.length);
@@ -85,7 +53,8 @@ for (var i=0; i < faces.length; i++)
                                textColor:0x000000ff, pixelSize:14, a:0.6});
     
     row.h = t.h+t2.h;
-    row.w = 100;
+    row.w = 800;
+  //row.painting = false;
     p += row.h;
 }
 var select = scene.createRectangle({parent:scrollContent, fillColor:0x000000, 
@@ -139,7 +108,8 @@ function updateText(s) {
 }
 
 var str = "";
-scene.on("keydown", function (keycode, flags) {
+scene.root.on("onKeyDown", function (e) {
+    var keycode = e.keyCode; var flags = e.flags;
     if (keycode == 38) scrollUp();
     else if (keycode == 40) scrollDn();
     else if (keycode == 8) {
@@ -148,9 +118,8 @@ scene.on("keydown", function (keycode, flags) {
     }
 });
 
-scene.on("onchar", function(c) {
-    str += c;
+scene.root.on("onChar", function(e) {
+    str += String.fromCharCode(e.charCode);
     updateText(str);
 });
 
-//root.painting = false;

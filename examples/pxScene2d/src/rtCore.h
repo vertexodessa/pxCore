@@ -4,11 +4,11 @@
 #include "rtConfig.h"
 
 //todo - add support for DFB
-#ifdef ENABLE_GLUT
-#include "pxContextDescGL.h"
-#else
+#ifdef ENABLE_DFB
 #include "pxContextDescDFB.h"
-#endif
+#else
+#include "pxContextDescGL.h"
+#endif //ENABLE_DFB
 
 #if defined(RT_PLATFORM_LINUX)
 #include "linux/rtConfigNative.h"

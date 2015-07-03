@@ -11,7 +11,7 @@ LIBDIR= -L/usr/lib/x86_64-linux-gnu -L/usr/local/lib/
 all: $(OUTDIR)/Mandelbrot
 
 $(OUTDIR)/Mandelbrot: Mandelbrot.cpp
-	g++ -o $(OUTDIR)/Mandelbrot_dfb -Wall $(INCDIR) $(CFLAGS) Mandelbrot.cpp $(LIBDIR) -lX11 -L$(OUTDIR) -lpxCore -lrt -ldirectfb -lpthread
+	g++ -o $(OUTDIR)/Mandelbrot_dfb -Wall $(INCDIR) $(CFLAGS) Mandelbrot.cpp $(LIBDIR) -lX11 -L$(OUTDIR) -lpxCore -lrt -ldirectfb
 
 
 

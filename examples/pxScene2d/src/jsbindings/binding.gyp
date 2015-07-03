@@ -31,7 +31,10 @@
         "../pxText.cpp",
         "../pxUtil.cpp",
         "../pxInterpolators.cpp",
-        "../pxImageDownloader.cpp"
+        "../pxFileDownloader.cpp",
+        "../pxTextureCacheObject.cpp",
+        "../pxMatrix4T.cpp",
+        "../pxTransform.cpp",
        ],
 
       "include_dirs" : [
@@ -53,10 +56,7 @@
         "../../../../../build/x11/libpxCore.a",
         "-lX11",
         "-lfreetype",
-        "-lglut",
-        "-lGLEW",
         "-lpng16",
-        "-ljpeg",
         "-lcurl",
         "-ldl",
         "-ldirectfb"
@@ -70,7 +70,8 @@
             "../../../external/jpg/.libs/libjpeg.a",
             ]}],
     ['OS!="mac"', {'libraries': [
-            "-lglut",
+            "-ldirectfb",
+#            "-lglut",
 #            "-lGL",
 #            "-lGLEW",
             "-ljpeg",
@@ -81,7 +82,7 @@
         "RT_PLATFORM_LINUX",
         "PX_PLATFORM_GENERIC_DFB"
         "ENABLE_DFB",
-
+        "RUNINMAIN"
       ],
 
       'cflags!': [

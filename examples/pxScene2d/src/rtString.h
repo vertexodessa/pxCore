@@ -29,15 +29,20 @@ public:
   void append(const char* s);
 
   int compare(const char* s) const;
+
+  // number of utf8 characters
   int32_t length() const;
+  
+  // number of bytes
+  int32_t byteLength() const;
 
 #if 0
   void subst(const char* before, const char* after) {
   }
 #endif
 
-  char* cString() const;
-  operator const char* () const { return mData; }
+  const char* cString() const;
+  operator const char* () const { return mData?(const char*)mData:""; }
 
   //uint32_t operator[](uint32_t i) const {}
   finline bool operator== (const char* s) const { return compare(s) == 0; }
@@ -46,7 +51,7 @@ public:
   finline bool operator<= (const char* s) const { return compare(s) <= 0; }
   finline bool operator>  (const char* s) const { return compare(s) >  0; }
   finline bool operator>= (const char* s) const { return compare(s) >= 0; }
-  finline operator char* () const { return mData; }
+
 private:
   char* mData;
 };

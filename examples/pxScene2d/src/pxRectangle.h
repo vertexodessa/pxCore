@@ -13,12 +13,13 @@ public:
   rtProperty(lineColor, lineColor, setLineColor, uint32_t);
   rtProperty(lineWidth, lineWidth, setLineWidth, float);
 
-  pxRectangle(): mLineWidth(0) 
+  pxRectangle(pxScene2d* scene):pxObject(scene),mLineWidth(0) 
   {
     float f[4] = {0,0,0,1};
     float l[4] = {1,1,1,1};
     setFillColor(f);
     setLineColor(l);
+    mReady.send("resolve",this);
   }
   
   rtError fillColor(uint32_t& /*c*/) const {

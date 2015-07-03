@@ -7,8 +7,6 @@
 #include <pxWindow.h>
 #include <pxWindowUtil.h>
 
-#include <node.h>
-
 using namespace v8;
 
 struct EventLoopContext
@@ -16,12 +14,16 @@ struct EventLoopContext
   pxEventLoop* eventLoop;
 };
 
+// TODO on OSX run the windows event loop on the main thread and use
+// a timer to pump messages
+#ifndef RUNINMAIN
 static void* processEventLoop(void* argp)
 {
   EventLoopContext* ctx = reinterpret_cast<EventLoopContext *>(argp);
   ctx->eventLoop->run();
   return 0;
 }
+#endif
 
 enum WindowCallback
 {
@@ -40,14 +42,17 @@ enum WindowCallback
 };
 
 
+pxEventLoop* gLoop = NULL;
+
 class jsWindow : public pxWindow
 {
 public:
-  jsWindow(int x, int y, int w, int h)
-    : mEventLoop(new pxEventLoop())
+  jsWindow(Isolate* isolate, int x, int y, int w, int h)
+    : pxWindow()
     , mScene(new pxScene2d())
+    , mEventLoop(new pxEventLoop())
   {
-    mJavaScene = Persistent<Object>::New(rtObjectWrapper::createFromObjectReference(mScene.getPtr()));
+    mJavaScene.Reset(isolate, rtObjectWrapper::createFromObjectReference(isolate, mScene.getPtr()));
 
     rtLogInfo("creating native with [%d, %d, %d, %d]", x, y, w, h);
     init(x, y, w, h);
@@ -61,19 +66,29 @@ public:
     // we start a timer in case there aren't any other evens to the keep the
     // nodejs event loop alive. Fire a time repeatedly.
     uv_timer_init(uv_default_loop(), &mTimer);
+    
+    // TODO experiment crank up the timers so we can pump cocoa messages on main thread
+    #ifdef RUNINMAIN
+    uv_timer_start(&mTimer, timerCallback, 0, 5);
+    #else
     uv_timer_start(&mTimer, timerCallback, 1000, 1000);
+    #endif
   }
 
-  const Persistent<Object> scene() const
+  Local<Object> scene(Isolate* isolate) const
   {
-    return mJavaScene;
+    return PersistentToLocal(isolate, mJavaScene);
   }
 
   void startEventProcessingThread()
   {
+#ifdef RUNINMAIN
+    gLoop = mEventLoop;
+#else
     EventLoopContext* ctx = new EventLoopContext();
     ctx->eventLoop = mEventLoop;
     pthread_create(&mEventLoopThread, NULL, &processEventLoop, ctx);
+#endif
   }
 
   virtual ~jsWindow()
@@ -82,17 +97,24 @@ public:
   }
 
 protected:
-  static void timerCallback(uv_timer_t* timer, int status)
+  static void timerCallback(uv_timer_t* )
   {
+
+    #ifdef RUNINMAIN
+    if (gLoop)
+      gLoop->runOnce();
+    #else
     rtLogDebug("Hello, from uv timer callback");
+    #endif
+
   }
 
-  virtual void onSize(int w, int h)
+  virtual void onSize(int32_t w, int32_t h)
   {
     mScene->onSize(w, h);
   }
 
-  virtual void onMouseDown(int x, int y, unsigned long flags)
+  virtual void onMouseDown(int32_t x, int32_t y, uint32_t flags)
   {
     mScene->onMouseDown(x, y, flags);
   }
@@ -103,7 +125,7 @@ protected:
     // mScene->onCloseRequest();
   }
 
-  virtual void onMouseUp(int x, int y, unsigned long flags)
+  virtual void onMouseUp(int32_t x, int32_t y, uint32_t flags)
   {
     mScene->onMouseUp(x, y, flags);
   }
@@ -113,62 +135,69 @@ protected:
     mScene->onMouseLeave();
   }
 
-  virtual void onMouseMove(int x, int y)
+  virtual void onMouseMove(int32_t x, int32_t y)
   {
     mScene->onMouseMove(x, y);
   }
 
-  virtual void onKeyDown(int keycode, unsigned long flags)
+  virtual void onKeyDown(uint32_t keycode, uint32_t flags)
   {
     mScene->onKeyDown(keycode, flags);
   }
 
-  virtual void onKeyUp(int keycode, unsigned long flags)
+  virtual void onKeyUp(uint32_t keycode, uint32_t flags)
   {
     mScene->onKeyUp(keycode, flags);
   }
   
-  virtual void onChar(char c)
+  virtual void onChar(uint32_t c)
   {
     mScene->onChar(c);
   }
 
-  virtual void onDraw(pxSurfaceNative s)
+  virtual void onDraw(pxSurfaceNative )
   {
     rtWrapperSceneUpdateEnter();
     mScene->onDraw();
     rtWrapperSceneUpdateExit();
   }
+
+  virtual void onAnimationTimer()
+  {
+    invalidateRect();
+  }
 private:
+  pxScene2dRef mScene;
+  pxEventLoop* mEventLoop;
   Persistent<Object> mJavaScene;
 
+#ifndef RUNINMAIN
   pthread_t mEventLoopThread;
-  pxEventLoop* mEventLoop;
-  pxScene2dRef mScene;
+#endif
+
   uv_timer_t mTimer;
 };
 
 static jsWindow* mainWindow = NULL;
 
-static Handle<Value> disposeNode(const Arguments& args)
+static void disposeNode(const FunctionCallbackInfo<Value>& args)
 {
   if (args.Length() < 1)
-    return Undefined();
+    return;
 
   if (!args[0]->IsObject())
-    return Undefined();
+    return;
 
   Local<Object> obj = args[0]->ToObject();
 
-  rtObjectWrapper* wrapper = static_cast<rtObjectWrapper *>(obj->GetPointerFromInternalField(0));
+  rtObjectWrapper* wrapper = static_cast<rtObjectWrapper *>(obj->GetAlignedPointerFromInternalField(0));
   if (wrapper)
     wrapper->dispose();
-
-  return Undefined();
 }
 
-static Handle<Value> getScene(const Arguments& args)
+static void getScene(const FunctionCallbackInfo<Value>& args)
 {
+
   if (mainWindow == NULL)
   {
     // This is somewhat experimental. There are concurrency issues with glut.
@@ -186,29 +215,38 @@ static Handle<Value> getScene(const Arguments& args)
 
     if (args.Length() == 4)
     {
-      x = toInt32(args, 0, 0);
-      y = toInt32(args, 1, 0);
-      w = toInt32(args, 2, 960);
-      h = toInt32(args, 3, 640);
+      x = toInt32(args, 0, x);
+      y = toInt32(args, 1, y);
+      w = toInt32(args, 2, w);
+      h = toInt32(args, 3, h);
     }
 
-    mainWindow = new jsWindow(x, y, w, h);
+    mainWindow = new jsWindow(args.GetIsolate(), x, y, w, h);
 
     char title[]= { "pxScene from JavasScript!" };
     mainWindow->setTitle(title);
     mainWindow->setVisibility(true);
   }
 
-  return mainWindow->scene();
+  EscapableHandleScope scope(args.GetIsolate());
+  args.GetReturnValue().Set(scope.Escape(mainWindow->scene(args.GetIsolate())));
 }
 
-void ModuleInit(Handle<Object> exports) 
+void ModuleInit(
+  Handle<Object>      target,
+  Handle<Value>     /* unused */,
+  Handle<Context>     context)
 {
-  rtFunctionWrapper::exportPrototype(exports);
-  rtObjectWrapper::exportPrototype(exports);
-  exports->Set(String::NewSymbol("getScene"), FunctionTemplate::New(getScene)->GetFunction());
-  exports->Set(String::NewSymbol("dispose"), FunctionTemplate::New(disposeNode)->GetFunction());
+  Isolate* isolate = context->GetIsolate();
+
+  rtFunctionWrapper::exportPrototype(isolate, target);
+  rtObjectWrapper::exportPrototype(isolate, target);
+
+  target->Set(String::NewFromUtf8(isolate, "getScene"),
+    FunctionTemplate::New(isolate, getScene)->GetFunction());
+
+  target->Set(String::NewFromUtf8(isolate, "dispose"),
+    FunctionTemplate::New(isolate, disposeNode)->GetFunction());
 }
 
-NODE_MODULE(px, ModuleInit)
-
+NODE_MODULE_CONTEXT_AWARE(px, ModuleInit);

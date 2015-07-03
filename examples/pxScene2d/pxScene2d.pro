@@ -10,13 +10,14 @@ DEFINES += ENABLE_DFB
 DEFINES += PX_PLATFORM_X11
 DEFINES += RT_PLATFORM_LINUX
 
-
 SOURCES += \
     src/pxImage.cpp \
     src/pxImage9.cpp \
-    src/pxImageDownloader.cpp \
+    src/pxFileDownloader.cpp \
+    src/pxTextureCacheObject.cpp \
     src/pxInterpolators.cpp \
     src/pxMain.cpp \
+#    src/main.cpp \
     src/pxMatrix4T.cpp \
     src/pxRectangle.cpp \
     src/pxScene2d.cpp \
@@ -41,7 +42,7 @@ HEADERS += \
     src/pxContext.h \
     src/pxImage.h \
     src/pxImage9.h \
-    src/pxImageDownloader.h \
+    src/pxFileDownloader.h \
     src/pxInterpolators.h \
     src/pxMatrix4T.h \
     src/pxRectangle.h \
@@ -109,17 +110,20 @@ unix {
     INCLUDEPATH += ./external/png
     INCLUDEPATH += /usr/local/include/directfb
 
-    LIBS += -L./external/jpg/.libs -ljpeg
-    LIBS += -L../pxCore/examples/pxScene2d/external/png/.libs -lpng16
-    LIBS += -L./external/ft/objs/.libs -lfreetype
-    LIBS += -L./external/curl/lib/.libs -lcurl
+    LIBS += -ldl -fPIC -lm
+    LIBS += -L"./external/jpg/.libs" -ljpeg
+    LIBS += -L"../pxCore/examples/pxScene2d/external/png/.libs" -lpng16
+    LIBS += -L"./external/ft/objs/.libs" -lfreetype
+    LIBS += -L"./external/curl/lib/.libs" -lcurl
 
-    LIBS += -L/usr/local/lib -ldirectfb
-   # LIBS += -L../pxCore/build/x11 -lpxCore
+    LIBS += -L"/usr/local/lib" -ldirectfb -lpthread
+  #  LIBS += -L"../../pxCore/build/x11" -lpxCore
 }
 
+message(" Here" $$PWD)
 
-unix:!macx: LIBS += -L$$PWD/../../../build-pxCore-Desktop_Qt_5_2_1_GCC_64bit-Debug/ -lpxCore
+unix:!macx: LIBS += -L$$PWD/../../build-pxCore-Desktop-Debug/ -lpxCore
+
 
 INCLUDEPATH += $$PWD/../../../build-pxCore-Desktop_Qt_5_2_1_GCC_64bit-Debug
 DEPENDPATH += $$PWD/../../../build-pxCore-Desktop_Qt_5_2_1_GCC_64bit-Debug

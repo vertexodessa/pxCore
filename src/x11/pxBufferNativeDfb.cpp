@@ -4,9 +4,11 @@
 
 #include "../pxCore.h"
 #include "../pxRect.h"
-#include "../pxOffscreen.h"
+//#include "../pxOffscreen.h"
 
 #include "pxBufferNativeDfb.h"
+
+#include "../pxWindow.h"
 
 extern DFBSurfacePixelFormat  dfbPixelformat;
 
@@ -31,22 +33,29 @@ extern DFBSurfacePixelFormat  dfbPixelformat;
 void pxBuffer::blit(pxSurfaceNative s, int dstLeft, int dstTop,
                     int dstWidth, int dstHeight,
                     int srcLeft, int srcTop)
-{  
+#if 1
+{
+   pxWindow* w = (pxWindow*)s;
+   if (w)
+     w->blit(*this, dstLeft, dstTop, dstWidth, dstHeight, srcLeft, srcTop);
+}
+#else
+{
   if(base() == NULL)
   {
-    printf("\nERROR:  pxBufferNativeDfb::blit()  base() is NULL   <<<<<< ERROR");
+    //printf("\nERROR:  pxBuffer::blit() >> base() is NULL   <<<<<< ERROR");
     return;
   }
 
   if(s == NULL)
   {
-    printf("\nERROR:  pxBufferNativeDfb::blit() 's is NULL   <<<<<< ERROR");
+    printf("\nERROR:  pxBuffer::blit() 's is NULL   <<<<<< ERROR");
     return;
   }
 
   if(s->dfb == NULL)
   {
-    printf("\nERROR:  pxBufferNativeDfb::blit()   s->dfb is NULL   <<<<<< ERROR");
+    printf("\nERROR:  pxBuffer::blit()   s->dfb is NULL   <<<<<< ERROR");
     return;
   }
 
@@ -97,5 +106,5 @@ void pxBuffer::blit(pxSurfaceNative s, int dstLeft, int dstTop,
     image->Release(image);
   }
 }
-
+#endif // 0
 

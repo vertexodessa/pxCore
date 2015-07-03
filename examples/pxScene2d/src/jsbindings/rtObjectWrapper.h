@@ -16,38 +16,41 @@ public:
   }
 
 public:
-  static void exportPrototype(Handle<Object> exports);
+  static void exportPrototype(Isolate* isolate, Handle<Object> exports);
 
-  static Handle<Object> createFromObjectReference(const rtObjectRef& ref);
+  static Handle<Object> createFromObjectReference(Isolate* isolate, const rtObjectRef& ref);
 
   static rtValue unwrapObject(const Local<Object>& val);
 
 private:
-  static Handle<Value> create(const Arguments& args);
+  static void create(const FunctionCallbackInfo<Value>& args);
 
-  static Handle<Value> getPropertyByName(Local<String> prop, const AccessorInfo& info);
-  static Handle<Value> setPropertyByName(Local<String> prop, Local<Value> val, const AccessorInfo& info);
-  static Handle<Array> getEnumerablePropertyNames(const AccessorInfo& info);
+  static void getPropertyByName(Local<String> prop, const PropertyCallbackInfo<Value>& info);
+  static void setPropertyByName(Local<String> prop, Local<Value> val, const PropertyCallbackInfo<Value>& info);
+  static void getEnumerablePropertyNames(const PropertyCallbackInfo<Array>& info);
 
-  static Handle<Value> getPropertyByIndex(uint32_t index, const AccessorInfo& info);
-  static Handle<Value> setPropertyByIndex(uint32_t index, Local<Value> val, const AccessorInfo& info);
-  static Handle<Array> getEnumerablePropertyIndecies(const AccessorInfo& info);
-
-  template<typename T>
-  static Handle<Value> getProperty(const T& prop, const AccessorInfo& info);
+  static void getPropertyByIndex(uint32_t index, const PropertyCallbackInfo<Value>& info);
+  static void setPropertyByIndex(uint32_t index, Local<Value> val, const PropertyCallbackInfo<Value>& info);
+  static void getEnumerablePropertyIndecies(const PropertyCallbackInfo<Array>& info);
 
   template<typename T>
-  static Handle<Value> setProperty(const T& prop, Local<Value> val, const AccessorInfo& info);
+  static void getProperty(const T& prop, const PropertyCallbackInfo<Value>& info);
 
-  typedef Handle<Value> (*enumerable_item_creator_t)(rtObjectRef& keys, uint32_t index);
-  static Handle<Array> getEnumerable(const AccessorInfo& info, enumerable_item_creator_t create);
+  template<typename T>
+  static void setProperty(const T& prop, Local<Value> val, const PropertyCallbackInfo<Value>& info);
+
+  typedef Handle<Value> (*enumerable_item_creator_t)(v8::Isolate* isolate, rtObjectRef& keys, uint32_t index);
+  static void getEnumerable(const PropertyCallbackInfo<Array>& info, enumerable_item_creator_t create);
 };
 
 class jsObjectWrapper : public rtIObject
 {
 public:
-  jsObjectWrapper(const Handle<Value>& val);
+  jsObjectWrapper(v8::Isolate* isolate, const Handle<Value>& val, bool isArray);
   ~jsObjectWrapper();
+
+  static const char* kIsJavaScriptObjectWrapper;
+  static bool isJavaScriptObjectWrapper(const rtObjectRef& obj);
 
   virtual unsigned long AddRef();
   virtual unsigned long Release();
@@ -59,12 +62,16 @@ public:
   virtual rtError Set(const char* name, const rtValue* value);
   virtual rtError Set(uint32_t i, const rtValue* value);
 
+  Local<Object> getWrappedObject();
+
 private:
-  rtError getAllKeys(rtValue* value);
+  rtError getAllKeys(Isolate* isolate, rtValue* value);
 
 private:
   unsigned long mRefCount;
   Persistent<Object> mObject;
+  Isolate* mIsolate;
+  bool mIsArray;
 };
 
 
@@ -98,7 +105,7 @@ inline rtString toString(const v8::Local<v8::String>& s)
   return rtString(*utf);
 }
 
-inline int toInt32(const v8::Arguments& args, int which, int defaultValue = 0)
+inline int toInt32(const v8::FunctionCallbackInfo<Value>& args, int which, int defaultValue = 0)
 {
   int i = defaultValue;
   if (!args[which]->IsUndefined())

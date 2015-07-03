@@ -212,7 +212,7 @@ private:
       case PX_KEY_NATIVE_BACKQUOTE:    return "BackQuote";
       case PX_KEY_NATIVE_QUOTE:        return "Quote";
 #endif
-      default: return "Undefined";
+    default: return "Undefined";
     }
   }
 

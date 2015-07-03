@@ -2,6 +2,13 @@ var px = require("./build/Debug/px");
 var http = require('http');
 var util = require('util');
 
+
+function secureRequire(pkg)
+{
+  // TODO: do whitelist/validate import here
+  return require(pkg);
+}
+
 function Api(scene) {
   this._scene = scene;
 }
@@ -57,8 +64,11 @@ Api.prototype.loadScriptContents = function(uri, closure) {
 Api.prototype.loadScriptForScene = function(container, scene, uri) {
   var sceneForChild = scene;
   var apiForChild = this;
-
   var code;
+
+  // TODO: This is the name that will show up in stack traces. We should
+  // resolve ./ to full paths (maybe).
+  var fname = uri;
 
   try {
     code = this.loadScriptContents(uri, function(code, err) {
@@ -67,7 +77,9 @@ Api.prototype.loadScriptForScene = function(container, scene, uri) {
         console   : console,
         scene     : sceneForChild,
         runtime   : apiForChild,
-        process   : process
+        process   : process,
+        require   : secureRequire,
+        setTimeout: setTimeout,
       };
 
       if (err) {
@@ -77,20 +89,22 @@ Api.prototype.loadScriptForScene = function(container, scene, uri) {
       }
       else {
         try {
-          app = vm.runInNewContext(code, sandbox);
+          // TODO: This form will not work until nodejs >= 0.12.x
+          // var opts = { filename: fname, displayError: true };
+          var script = new vm.Script(code, fname);
+          script.runInNewContext(sandbox);
+
           // TODO do the old scenes context get released when we reload a scenes url??
             
-//            scene.ctx = app;
-
-            // TODO part of an experiment to eliminate intermediate rendering of the scene
-            // while it is being set up
-            if (true) { // enable to fade scenes in
-                container.a = 0;
-                container.painting = true;
-                container.animateTo({a:1}, 0.2, 0, 0);
-            }
-            else
-                container.painting = true;
+          // TODO part of an experiment to eliminate intermediate rendering of the scene
+          // while it is being set up
+          if (true) { // enable to fade scenes in
+            container.a = 0;
+            container.painting = true;
+            container.animateTo({a:1}, 0.2, 0, 0);
+          }
+          else
+            container.painting = true;
         }
         catch (err) {
           console.log("failed to run app:" + uri);
@@ -118,6 +132,32 @@ Api.prototype.loadScriptForScene = function(container, scene, uri) {
   }
 }
 
+function readConfigFile(argv)
+{
+  var fs = require('fs');
+  var path = require('path');
+  var configSettings = {};
+  var argvLength = argv.length;
+  for (var i = 0; i < argvLength; i++) {
+      if (argv[i].indexOf("-config=") > -1)
+      {
+        var configString = argv[i].split("-config=");
+        if (configString.length > 1)
+        {
+          var configFileName = argv[i].split("-config=")[1];
+          var configPath = path.join(__dirname, configFileName);
+          if (configFileName.length > 0 && fs.existsSync(configPath))
+          {
+            configSettings = JSON.parse(fs.readFileSync(configPath, { encoding: 'utf8' }));
+            break;
+          }
+        }
+      }
+  }
+  
+  return configSettings;
+}
+
 var scene = px.getScene(0, 0, 800, 400);
 var api = new Api(scene);
 
@@ -134,24 +174,19 @@ scene.onScene = function(container, innerscene, url) {
 var argv = process.argv;
 
 if (argv.length >= 3) {
+    var configJson = readConfigFile(argv);
     var originalURL = argv[2];
     // TODO - WARNING root scene.create* doesn't allow passing in property bags
-    var childScene = scene.createScene();
+    configJson["parent"] = scene.root;
+    configJson["url"] = originalURL;
+    var childScene = scene.createScene(configJson);
+  scene.setFocus(childScene);
+/*
     childScene.url = originalURL;
     childScene.parent = scene.root;
-    var fpsBg = scene.createRectangle();
-    fpsBg.fillColor = 0x00000030;
-    fpsBg.lineColor = 0xffff0030;
-    fpsBg.lineWidth = 3;
-    fpsBg.x = fpsBg.y = 10;
-    fpsBg.a = 0;
-    fpsBg.parent = scene.root;
-    var fpsCounter = scene.createText();
-    fpsCounter.parent = fpsBg;
-    fpsCounter.x = 5;
-    fpsCounter.textColor = 0xffff00ff;
-    fpsCounter.pixelSize = 24;
-    fpsCounter.text = "0fps"
+*/
+    var fpsBg = scene.createRectangle({fillColor:0x00000080,lineColor:0xffff0080,lineWidth:3,x:10,y:10,a:0,parent:scene.root});
+    var fpsCounter = scene.createText({x:5,textColor:0xffffffff,pixelSize:24,text:"0fps",parent:fpsBg});
     fpsBg.w = fpsCounter.w+16;
     fpsBg.h = fpsCounter.h;
 
@@ -160,60 +195,75 @@ if (argv.length >= 3) {
         childScene.h = h;
     }
 
-    scene.on("fps", function(fps) { 
+    scene.on("onFPS", function(e) { 
         if(fpsBg.a) {
-            fpsCounter.text = ""+Math.floor(fps)+"fps"; 
+            fpsCounter.text = ""+Math.floor(e.fps)+"fps"; 
             fpsBg.w = fpsCounter.w+16;
             fpsBg.h = fpsCounter.h;
         }
     });
 
-    scene.on("keydown", function(code, flags) {
-        console.log("keydown:", code, ", ", flags);
-        if (code == 89 && (flags & 48)) {  // ctrl-alt-y
-            fpsBg.a = (fpsBg.a==0)?1.0:0;
-        }
-        if (code == 79 && (flags & 48)) {  // ctrl-alt-o
-            scene.showOutlines = !scene.showOutlines;
-        }
-        else if (code == 82 && (flags & 16)) {  // ctrl-r
-            console.log("Reloading url: ", originalURL);
-            childScene.url = originalURL;
-        }
-        else { 
-            // forward event
-// TODO would be nice if apply worked on rtFunctions so we could forward all arguments more automatically
-//            var args = ["keydown"];
-//            args.splice(0,0,[].slice.call(arguments));
-//            childScene.emit.apply(args);
-            childScene.emit("keydown", code, flags);
-        }
+
+  // Cursor emulation mostly for egl targets right now.
+
+  // hacky raspberry pi detection
+  var os = require("os");
+  var hostname = os.hostname();
+  
+  if (hostname == "raspberrypi") {
+    var cursor = scene.createImage({url:"cursor.png",parent:scene.root,
+				                            interactive:false});
+    
+    scene.on("onMouseMove", function(e) {
+	    cursor.x = e.x-23;
+	    cursor.y = e.y-10;
     });
-    scene.on("keyup", function(code, flags) {
-        console.log("keyup:", code, ", ", flags);
+  }
+
+    scene.root.on("onPreKeyDown", function(e) {
+      console.log("in onKeyDown");
+	    var code = e.keyCode; var flags = e.flags;
+      console.log("onKeyDown:", code, ", ", flags);
+      if (code == 89 && (flags & 48)) {  // ctrl-alt-y
+        fpsBg.a = (fpsBg.a==0)?1.0:0;
+        e.stopPropagation();
+      }
+      if (code == 79 && (flags & 48)) {  // ctrl-alt-o
+        scene.showOutlines = !scene.showOutlines;
+        e.stopPropagation();
+      }
+      else if (code == 82 && (flags & 16)) {  // ctrl-r
+        console.log("Reloading url: ", originalURL);
+        childScene.url = originalURL;
+        e.stopPropagation();
+      }
+    });
+    scene.root.on("onPreKeyUp", function(e) {
+console.log("in onKeyUp");
+	var code = e.keyCode; var flags = e.flags;
+        console.log("onKeyUp:", code, ", ", flags);
         // eat the ones we handle here
-        if (code == 89 && (flags & 48)); // ctrl-alt-y
-        if (code == 79 && (flags & 48)); // ctrl-alt-o
-        else if (code == 82 && (flags | 16));
-        else
-            childScene.emit("keyup", code, flags);
-        
+        if (code == 89 && (flags & 48)) e.stopPropagation(); // ctrl-alt-y
+        if (code == 79 && (flags & 48)) e.stopPropagation(); // ctrl-alt-o
+        else if (code == 82 && (flags | 16)) e.stopPropagation(); // ctrl-r
     });
 
-    scene.on("onchar", function(c) {
-        //TODO I think we'd like this function to get a string??
-        console.log("onchar:", String.fromCharCode(c));
-        if (c>=32)
-            childScene.emit("onchar", String.fromCharCode(c));
+
+    scene.root.on("onPreChar", function(e) {
+      console.log("in onchar");
+	    var c = e.charCode;
+      console.log("onChar:", c);
+	    // TODO eating some "undesired" chars for now... need to redo this
+      if (c<32) {
+        //            childScene.emit("onChar", e);
+        console.log("stop onChar");
+        e.stopPropagation()
+      }
     });
 
-    scene.on("mousedown", function(x, y) { childScene.emit("mousedown", x, y); });    
-    scene.on("mouseup", function(x, y) { childScene.emit("mouseup", x, y); });    
-    scene.on("mousemove", function(x, y) { childScene.emit("mousemove", x, y); });
-    scene.on("mouseenter", function() { childScene.emit("mouseenter"); });
-    scene.on("mouseleave", function() { childScene.emit("mouseleave"); });
 
-    scene.on("resize", updateSize);
+    // TODO if I log out event object e... there is extra stuff??
+    scene.on("onResize", function(e) { updateSize(e.w, e.h);});
     updateSize(scene.w, scene.h);
 }
 else

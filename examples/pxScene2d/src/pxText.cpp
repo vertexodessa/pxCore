@@ -2,6 +2,8 @@
 // pxText.cpp
 
 #include "pxText.h"
+#include "pxFileDownloader.h"
+#include "pxTimer.h"
 
 #include <math.h>
 #include <map>
@@ -34,6 +36,7 @@ GlyphCache gGlyphCache;
 
 extern pxContext context;
 
+// TODO can we eliminate direct utf8.h usage
 extern "C" {
 #include "utf8.h"
 }
@@ -44,6 +47,24 @@ extern "C" {
 
 FT_Library ft;
 
+int fontDownloadsPending = 0; //must only be set in the main thread
+rtMutex fontDownloadMutex;
+bool fontDownloadsAvailable = false;
+vector<FontDownloadRequest> completedFontDownloads;
+
+void pxFontDownloadComplete(pxFileDownloadRequest* fileDownloadRequest)
+{
+  if (fileDownloadRequest != NULL)
+  {
+    FontDownloadRequest fontDownloadRequest;
+    fontDownloadRequest.fileDownloadRequest = fileDownloadRequest;
+    fontDownloadMutex.lock();
+    completedFontDownloads.push_back(fontDownloadRequest);
+    fontDownloadsAvailable = true;
+    fontDownloadMutex.unlock();
+  }
+}
+
 
 // Weak Map
 typedef map<rtString, pxFace*> FaceMap;
@@ -51,13 +72,24 @@ FaceMap gFaceMap;
 
 uint32_t gFaceId = 0;
 
-pxFace::pxFace() { mFaceId = gFaceId++; }
+pxFace::pxFace():mRefCount(0) { mFaceId = gFaceId++; }
 
 rtError pxFace::init(const char* n)
 {
   if(FT_New_Face(ft, n, 0, &mFace))
     return RT_FAIL;
   
+  mFaceName = n;
+  setPixelSize(defaultPixelSize);
+  gFaceMap.insert(make_pair(n, this));
+  return RT_OK;
+}
+
+rtError pxFace::init(const FT_Byte*  fontData, FT_Long size, const char* n)
+{
+  if(FT_New_Memory_Face(ft, fontData, size, 0, &mFace))
+    return RT_FAIL;
+
   mFaceName = n;
   setPixelSize(defaultPixelSize);
   gFaceMap.insert(make_pair(n, this));
@@ -98,7 +130,7 @@ const GlyphCacheEntry* pxFace::getGlyph(uint32_t codePoint)
       return NULL;
     else
     {
-      rtLogInfo("glyph cache miss");
+      rtLogDebug("glyph cache miss");
       GlyphCacheEntry *entry = new GlyphCacheEntry;
       FT_GlyphSlot g = mFace->glyph;
       
@@ -114,19 +146,13 @@ const GlyphCacheEntry* pxFace::getGlyph(uint32_t codePoint)
                                               g->bitmap.width, g->bitmap.rows, 
                                               g->bitmap.buffer);
       
-#if 0
-      GlyphKey key;
-      key.mFaceId = mFaceId;
-      key.mPixelSize = mPixelSize;
-      key.mCodePoint = codePoint;
-#endif
       gGlyphCache.insert(make_pair(key,entry));
       return entry;
     }
   }
   return NULL;
 }
-  
+
 void pxFace::measureText(const char* text, uint32_t size,  float sx, float sy, 
                          float& w, float& h) 
 {
@@ -155,8 +181,8 @@ void pxFace::measureText(const char* text, uint32_t size,  float sx, float sy,
     }
     else
     {
-      //h += metrics->height>>6;
-      h += (metrics->height);
+      h += metrics->height>>6;
+      //h += (metrics->height);
       lw = 0;
     }
     w = pxMax<float>(w, lw);
@@ -244,12 +270,24 @@ void initFT()
 
 }
 
-pxText::pxText() {
+pxText::pxText(pxScene2d* scene):pxObject(scene), mFontDownloadRequest(NULL)
+{
   initFT();
   float c[4] = {1, 1, 1, 1};
   memcpy(mTextColor, c, sizeof(mTextColor));
   mFace = gFace;
   mPixelSize = defaultPixelSize;
+  mDirty = true;
+}
+
+pxText::~pxText()
+{
+  if (mFontDownloadRequest != NULL)
+  {
+    // if there is a previous request pending then set the callback to NULL
+    // the previous request will not be processed and the memory will be freed when the download is complete
+    mFontDownloadRequest->setCallbackFunctionThreadSafe(NULL);
+  }
 }
 
 rtError pxText::text(rtString& s) const { s = mText; return RT_OK; }
@@ -267,8 +305,64 @@ rtError pxText::setPixelSize(uint32_t v)
   return RT_OK; 
 }
 
+
+        
+void pxText::update(double t)
+{
+  pxObject::update(t);
+  
+#if 1
+  if (mDirty)
+  {
+#if 0
+    // TODO magic number
+    if (mText.length() >= 5)
+    {
+      setPainting(true);
+      setPainting(false);
+    }
+    else
+      setPainting(true);
+#else
+    // TODO make this configurable
+    if (mText.length() >= 10)
+    {
+      mCached = NULL;
+      pxContextFramebufferRef cached = context.createFramebuffer(mw,mh);
+      if (cached.getPtr())
+      {
+        pxContextFramebufferRef previousSurface = context.getCurrentFramebuffer();
+        context.setFramebuffer(cached);
+        pxMatrix4f m;
+        context.setMatrix(m);
+        context.setAlpha(1.0);
+        context.clear(mw,mh);
+        draw();
+        context.setFramebuffer(previousSurface);
+        mCached = cached;
+      }
+    }
+    else mCached = NULL;
+    
+#endif
+    
+    mDirty = false;
+    }
+#else
+  mDirty = false;
+#endif
+  
+}
+
 void pxText::draw() {
-  mFace->renderText(mText, mPixelSize, 0, 0, 1.0, 1.0, mTextColor, mw);
+  if (mCached.getPtr() && mCached->getTexture().getPtr())
+  {
+    context.drawImage(0, 0, mw, mh, mCached->getTexture(), pxTextureRef(), PX_NONE, PX_NONE);
+  }
+  else
+  {
+    mFace->renderText(mText, mPixelSize, 0, 0, 1.0, 1.0, mTextColor, mw);
+  }
 }
 
 rtError pxText::setFaceURL(const char* s)
@@ -278,22 +372,129 @@ rtError pxText::setFaceURL(const char* s)
 
   FaceMap::iterator it = gFaceMap.find(s);
   if (it != gFaceMap.end())
+  {
+    mReady.send("resolve", this);
     mFace = it->second;
+  }
   else
   {
-    pxFaceRef f = new pxFace;
-    rtError e = f->init(s);
-    if (e != RT_OK)
+    const char *result = strstr(s, "http");
+    int position = result - s;
+    if (position == 0 && strlen(s) > 0)
     {
-      rtLogInfo("Could not load font face, %s, %s\n", "blah", s);
-      return e;
+      if (mFontDownloadRequest != NULL)
+      {
+        // if there is a previous request pending then set the callback to NULL
+        // the previous request will not be processed and the memory will be freed when the download is complete
+        mFontDownloadRequest->setCallbackFunctionThreadSafe(NULL);
+      }
+      mFontDownloadRequest =
+          new pxFileDownloadRequest(s, this);
+      fontDownloadsPending++;
+      mFontDownloadRequest->setCallbackFunction(pxFontDownloadComplete);
+      pxFileDownloader::getInstance()->addToDownloadQueue(mFontDownloadRequest);
     }
-    else
-      mFace = f;
+    else {
+      pxFaceRef f = new pxFace;
+      rtError e = f->init(s);
+      if (e != RT_OK)
+      {
+        rtLogInfo("Could not load font face, %s, %s\n", "blah", s);
+        mReady.send("reject",this);
+        return e;
+      }
+      else
+      {
+        mReady.send("resolve", this);
+        mFace = f;
+      }
+    }
   }
   mFaceURL = s;
   
   return RT_OK;
+}
+
+void pxText::checkForCompletedDownloads(int maxTimeInMilliseconds)
+{
+  double startTimeInMs = pxMilliseconds();
+  if (fontDownloadsPending > 0)
+  {
+    fontDownloadMutex.lock();
+    if (fontDownloadsAvailable)
+    {
+      for(vector<FontDownloadRequest>::iterator it = completedFontDownloads.begin(); it != completedFontDownloads.end(); )
+      {
+        FontDownloadRequest fontDownloadRequest = (*it);
+        if (!fontDownloadRequest.fileDownloadRequest)
+        {
+          it = completedFontDownloads.erase(it);
+          continue;
+        }
+        if (fontDownloadRequest.fileDownloadRequest->getCallbackData() != NULL)
+        {
+          pxText *textObject = (pxText *) fontDownloadRequest.fileDownloadRequest->getCallbackData();
+          textObject->onFontDownloadComplete(fontDownloadRequest);
+        }
+
+        delete fontDownloadRequest.fileDownloadRequest;
+        fontDownloadsAvailable = false;
+        fontDownloadsPending--;
+        it = completedFontDownloads.erase(it);
+        double currentTimeInMs = pxMilliseconds();
+        if ((maxTimeInMilliseconds >= 0) && (currentTimeInMs - startTimeInMs > maxTimeInMilliseconds))
+        {
+          break;
+        }
+      }
+      if (fontDownloadsPending < 0)
+      {
+        //this is a safety check (hopefully never used)
+        //to ensure downloads are still processed in the event of a fontDownloadsPending bug in the future
+        fontDownloadsPending = 0;
+      }
+    }
+    fontDownloadMutex.unlock();
+  }
+}
+
+void pxText::onFontDownloadComplete(FontDownloadRequest fontDownloadRequest)
+{
+  mFontDownloadRequest = NULL;
+  if (fontDownloadRequest.fileDownloadRequest == NULL)
+  {
+    mReady.send("reject",this);
+    return;
+  }
+  if (fontDownloadRequest.fileDownloadRequest->getDownloadStatusCode() == 0 &&
+      fontDownloadRequest.fileDownloadRequest->getHttpStatusCode() == 200 &&
+      fontDownloadRequest.fileDownloadRequest->getDownloadedData() != NULL)
+  {
+    pxFaceRef f = new pxFace;
+    rtError e = f->init((FT_Byte*)fontDownloadRequest.fileDownloadRequest->getDownloadedData(),
+                        (FT_Long)fontDownloadRequest.fileDownloadRequest->getDownloadedDataSize(),
+                        fontDownloadRequest.fileDownloadRequest->getFileURL().cString());
+    if (e != RT_OK)
+    {
+      rtLogInfo("Could not load font face, %s, %s\n", "blah", fontDownloadRequest.fileDownloadRequest->getFileURL().cString());
+      mReady.send("reject",this);
+    }
+    else {
+      mFace = f;
+      mReady.send("resolve",this);
+    }
+  }
+  else
+  {
+    rtLogWarn("Font Download Failed: %s Error: %s HTTP Status Code: %ld",
+              fontDownloadRequest.fileDownloadRequest->getFileURL().cString(),
+              fontDownloadRequest.fileDownloadRequest->getErrorString().cString(),
+              fontDownloadRequest.fileDownloadRequest->getHttpStatusCode());
+    if (mParent != NULL)
+    {
+      mReady.send("reject",this);
+    }
+  }
 }
 
 rtDefineObject(pxText, pxObject);

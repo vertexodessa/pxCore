@@ -20,40 +20,31 @@
 rtError pxLoadImage(const char* imageData, size_t imageDataSize, 
                      pxOffscreen& o)
 {
-#if 0
-#if 0
-  if (pxIsPNGImage(imageData, imageDataSize))
-#endif
-    return pxLoadPNGImage(imageData, imageDataSize, o);
-#if 0
-  else if (pxIsJPGImage(imageData, imageDataSize))
-    return pxLoadJPGImage(imageData, imageDataSize, o);
-  else
-  {
-    rtLogWarn("Unsupported image file type");
-    return RT_ERROR;
-  }
-#endif
-#else
+  // TODO more sane image type detection and flow
   if (pxLoadPNGImage(imageData, imageDataSize, o) != RT_OK)
   {
     // Failed to load %s as PNG trying as JPG
     return pxLoadJPGImage(imageData, imageDataSize, o);
   }
   return RT_OK;
-#endif
 }
 
-// Detection needs to be improved...
+// TODO Detection needs to be improved...
 // Handling jpeg as fallback now
 rtError pxLoadImage(const char* filename, pxOffscreen& b)
 {
   rtData d;
   rtError e = rtLoadFile(filename, d);
   if (e == RT_OK)
+  {
     return pxLoadImage((const char*)d.data(), d.length(), b);
+  }
   else
-    rtLogError("Could not load image file %s.", filename);
+  {
+    e = RT_RESOURCE_NOT_FOUND;
+    rtLogError("Could not load image file [%s].", filename);
+  }
+
   return e;
 }
 
@@ -89,7 +80,7 @@ rtError pxStorePNGImage(const char* filename, pxBuffer& b, bool /*grayscale*/,
   png_bytep * row_pointers;
 
   // create file
-  FILE *fp = fopen(filename, "wb");
+  rtFilePointer fp(fopen(filename, "wb"));
 
   if (fp)
   {
@@ -106,13 +97,14 @@ rtError pxStorePNGImage(const char* filename, pxBuffer& b, bool /*grayscale*/,
 
     if(!info_ptr)
     {
+      png_destroy_write_struct(&png_ptr, NULL);
       rtLogError("FATAL: png_create_info_struct() - FAILED");
       return RT_FAIL;
     }
 
     if (!setjmp(png_jmpbuf(png_ptr)))
     {
-      png_init_io(png_ptr, fp);
+      png_init_io(png_ptr, fp.getPtr());
 
       // write header
       if (!setjmp(png_jmpbuf(png_ptr)))
@@ -159,6 +151,7 @@ rtError pxStorePNGImage(const char* filename, pxBuffer& b, bool /*grayscale*/,
       }
     }
 
+    png_destroy_write_struct(&png_ptr, &info_ptr);
 
 #if 0
     // cleanup heap allocation
@@ -168,8 +161,6 @@ rtError pxStorePNGImage(const char* filename, pxBuffer& b, bool /*grayscale*/,
     }
 #endif
     //		free(row_pointers);
-
-    fclose(fp);
   }
   return RT_OK;
 }
@@ -525,13 +516,6 @@ rtError pxLoadJPGImage(const char* buf, size_t buflen, pxOffscreen& o)
    * requires it in order to read binary files.
    */
 
-#if 0
-  if ((infile = fopen(filename, "rb")) == NULL) {
-    fprintf(stderr, "can't open %s\n", filename);
-    return 0;
-  }
-#endif
-
   /* Step 1: allocate and initialize JPEG decompression object */
 
   /* We set up the normal JPEG error routines, then override error_exit. */
@@ -544,18 +528,14 @@ rtError pxLoadJPGImage(const char* buf, size_t buflen, pxOffscreen& o)
      */
     jpeg_destroy_decompress(&cinfo);
 //    fclose(infile);
-    return 0;
+    return RT_FAIL;
   }
   /* Now we can initialize the JPEG decompression object. */
   jpeg_create_decompress(&cinfo);
 
   /* Step 2: specify data source (eg, a file) */
 
-  //jpeg_stdio_src(&cinfo, infile);
-
-#if 1
   jpeg_mem_src(&cinfo, (unsigned char*)buf, buflen);
-#endif
 
   /* Step 3: read file parameters with jpeg_read_header() */
 
@@ -732,6 +712,7 @@ rtError pxLoadPNGImage(const char* imageData, size_t imageDataSize,
 
   if(!info_ptr)
   {
+    png_destroy_read_struct(&png_ptr, NULL, NULL);
     rtLogError("FATAL: png_create_info_struct() - failed !");
     return e;
   }
@@ -791,6 +772,8 @@ rtError pxLoadPNGImage(const char* imageData, size_t imageDataSize,
       e = RT_OK;
     }
   }
+
+  png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
 
   return e;
 }

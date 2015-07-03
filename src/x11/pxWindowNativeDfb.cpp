@@ -4,10 +4,10 @@
 
 #include "../pxCore.h"
 #include "../pxWindow.h"
-#include "pxWindowNativeDfb.h"
 #include "../pxTimer.h"
-
 #include "../pxWindowUtil.h"
+
+#include "pxWindowNativeDfb.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -16,10 +16,11 @@
 
 #define DFB_PX_CORE_FPS 30
 
-
+//#define USE_DFB__FLIPPING
 //#define USE_DFB_WINDOW
 //#define USE_DFB_LAYER
-#define USE_EVENT_THREAD
+//#define USE_EVENT_THREAD
+//#define USE_DRAW_THREAD
 
 IDirectFB              *dfb         = NULL;
 
@@ -37,10 +38,13 @@ IDirectFBEventBuffer   *dfbBuffer   = NULL;
 
 #ifdef USE_DFB_WINDOW
 IDirectFBEventBuffer   *dfbIBuffer  = NULL;
-
-IDirectFBInputDevice   *dfbKeyboard;
+//IDirectFBInputDevice   *dfbKeyboard = NULL;
 #endif
 
+
+#ifdef USE_DRAW_THREAD
+void *draw_func(void *ptr);
+#endif
 
 // TODO ... probably better per window.
 static int cursor_x = 0;
@@ -53,7 +57,7 @@ static int cursor_y = 0;
 #ifdef USE_DFB_LAYER
 DFBSurfacePixelFormat  dfbPixelformat = DFBSurfacePixelFormat(DSPF_ABGR); // DSPF_ABGR;// ** DSPF_ABGR **;  DSPF_ARGB;
 #else
-DFBSurfacePixelFormat  dfbPixelformat = DSPF_ABGR; //DFBSurfacePixelFormat(0);
+DFBSurfacePixelFormat  dfbPixelformat = DSPF_ABGR;//DSPF_ABGR; //DFBSurfacePixelFormat(0);
 #endif
 
 #ifdef USE_EVENT_THREAD
@@ -61,7 +65,7 @@ static pthread_t draw_thread;
 #endif
 
 bool needsFlip = true;
-bool exitFlag  = false;
+bool exitFlag = false;
 
 #define DFB_CHECK(x...)                                   \
 {                                                         \
@@ -88,11 +92,8 @@ bool    pxWindowNative::mEventLoopTimerStarted = false;
 float   pxWindowNative::mEventLoopInterval = 1000.0 / (float)DFB_PX_CORE_FPS;
 timer_t pxWindowNative::mRenderTimerId;
 
-//start dfb callbacks
 
 char* p2str(DFBSurfacePixelFormat fmt);
-
-//start dfb callbacks
 
 void onKeyboardDown(int32_t key, uint32_t mods);
 void onKeyboardUp(int32_t key, uint32_t mods);
@@ -101,41 +102,12 @@ void onTimer(uint32_t v);
 void onMouseMotion(int32_t x, int32_t y);
 void onMouse(uint32_t button, int32_t state, int32_t x, int32_t y);
 
-static void reshape(int width, int height)
-{
-  vector<pxWindowNative*> windowVector = pxWindow::getNativeWindows();
-  vector<pxWindowNative*>::iterator i;
-
-  for (i = windowVector.begin(); i < windowVector.end(); i++)
-  {
-    pxWindowNative* w = (*i);
-    w->onSize(width, height);
-  }
-}
-
-void display()
-{
-  vector<pxWindowNative*> windowVector = pxWindow::getNativeWindows();
-  vector<pxWindowNative*>::iterator i;
-
-  for (i = windowVector.begin(); i < windowVector.end(); i++)
-  {
-    pxWindowNative* w = (*i);
-    w->animateAndRender();
-  }
-
-  if(dfbSurface && needsFlip)
-  {
-    dfbSurface->Flip( dfbSurface, NULL, (DFBSurfaceFlipFlags) DSFLIP_WAITFORSYNC );
-
-    needsFlip = false;
-  }
-}
-
 
 
 //#define EPRINTF(...) printf(__VA_ARGS__)
 #define EPRINTF(f_, ...)
+
+#ifdef USE_DFB_WINDOW
 
 static void
 ProcessWindowEvent(DFBWindowEvent * evt)
@@ -163,18 +135,17 @@ ProcessWindowEvent(DFBWindowEvent * evt)
 
         /* fall through */
       case DWET_SIZE:
-
-      {
+        {
 #ifdef USE_DFB_WINDOW
-        int ww = 0, hh = 0;
-        dfbWindow->GetSize(dfbWindow, &ww, &hh);
+          int ww = 0, hh = 0;
+          dfbWindow->GetSize(dfbWindow, &ww, &hh);
 
-        EPRINTF("\n DWET_SIZE - WxH: %d x %d", ww, hh);
+          EPRINTF("\n DWET_SIZE - WxH: %d x %d", ww, hh);
 
-        reshape(ww, hh);
+          reshape(ww, hh);
 #endif
-        // Send to WINDOW - SIZE
-      }
+          // Send to WINDOW - SIZE
+        }
         break;
       case DWET_CLOSE:     EPRINTF("\n DWET_CLOSE");     break;
       case DWET_GOTFOCUS:  EPRINTF("\n DWET_GOTFOCUS");  break;
@@ -187,11 +158,12 @@ ProcessWindowEvent(DFBWindowEvent * evt)
     }//SWITCH
   }
 }
+#endif // USE_DFB_WINDOW
 
 static void
 ProcessInputEvent(DFBInputEvent *ievt)
 {
-  unsigned long flags = 0;
+  uint32_t flags = 0;
 
   if( ievt == NULL )   return;
 
@@ -260,31 +232,47 @@ ProcessInputEvent(DFBInputEvent *ievt)
   }
 }
 
+
+//start dfb callbacks
+
+static void reshape(int32_t width, int32_t height)
+{
+  vector<pxWindowNative*> windowVector = pxWindow::getNativeWindows();
+  vector<pxWindowNative*>::iterator i;
+
+  for (i = windowVector.begin(); i < windowVector.end(); i++)
+  {
+    pxWindowNative* w = (*i);
+    w->onSize(width, height);
+  }
+}
+
 void eventLoop()
 {
+  printf("************************* %s - STARTED\n",__PRETTY_FUNCTION__);// JUNK
+
   while (!exitFlag)
   {
     DFB_CHECK (dfbBuffer->WaitForEvent(dfbBuffer)); // Block waiting for next event...
 
 #ifdef USE_DFB_WINDOW
-//    DFBWindowEvent wEvent;
+
+    DFBWindowEvent wEvent = {};
     DFBInputEvent  iEvent = {};
 
-
     // Get any WINDOW events in case we need them
-//    while (dfbBuffer->GetEvent(dfbBuffer, DFB_EVENT(&wEvent)) == DFB_OK)
-//    {
-//      ProcessWindowEvent( &wEvent);
-
-//    }//WHILE - Window Events
-
+    while (dfbBuffer->GetEvent(dfbBuffer, DFB_EVENT(&wEvent)) == DFB_OK)
+    {
+      ProcessWindowEvent( &wEvent);
+    }
 
     // Get any INPUT events in case we need them
     while (dfbIBuffer->GetEvent(dfbIBuffer, DFB_EVENT(&iEvent)) == DFB_OK)
     {
       ProcessInputEvent( &iEvent);
+    }
 
-    }//WHILE - Input Events
+
 #else
 
     DFBInputEvent  iEvent;
@@ -293,88 +281,35 @@ void eventLoop()
     while (dfbBuffer->GetEvent(dfbBuffer, DFB_EVENT(&iEvent)) == DFB_OK)
     {
       ProcessInputEvent( &iEvent);
-
-    }//WHILE - Input Events
+    }
 #endif
 
   }//WHILE
 
   printf("************************* %s ... exiting...\n",__PRETTY_FUNCTION__);// JUNK
-
 }
 
-//#####
-
-class Timer
+void display()
 {
-    timeval timer[2];
+  vector<pxWindowNative*> windowVector = pxWindow::getNativeWindows();
+  vector<pxWindowNative*>::iterator i;
 
-    struct timespec start_tm, end_tm;
-
-  public:
-
-    void start()
-    {
-        gettimeofday(&this->timer[0], NULL);
-    }
-
-    void stop()
-    {
-        gettimeofday(&this->timer[1], NULL);
-    }
-
-    long duration_ms() const // milliseconds
-    {
-        long secs( this->timer[1].tv_sec  - this->timer[0].tv_sec);
-        long usecs(this->timer[1].tv_usec - this->timer[0].tv_usec);
-
-        if(usecs < 0)
-        {
-            --secs;
-            usecs += 1000000;
-        }
-
-        return static_cast<long>( (secs * 1000) + ((double) usecs / 1000.0 + 0.5));
-    }
-};
-
-//#####
-
-void mysleep_ms(int32_t milisec)
-{
-    struct timespec res;
-
-    res.tv_sec  = (milisec / 1000);
-    res.tv_nsec = (milisec * 1000000) % 1000000000;
-
-    clock_nanosleep(CLOCK_MONOTONIC, 0, &res, NULL);
-}
-
-static Timer  timer;
-
-
-void *draw_func(void *ptr)
-{
-  float fps_rate = ptr ? *((int *) ptr) : 60.0;
-  float sleep_ms = (1.0/(float) fps_rate) * 1000.0;
-
-  printf("\n\n\n SET fps = %f    %f ms\n\n\n", fps_rate, sleep_ms);
-
-  while(!exitFlag)
+  for (i = windowVector.begin(); i < windowVector.end(); i++)
   {
-    timer.start();
-
-    onTimer(0);
-
-    timer.stop();
-
-    // schedule next timer event
-    mysleep_ms(sleep_ms - timer.duration_ms() );
+    pxWindowNative* w = (*i);
+    w->animateAndRender();
   }
 
-  return NULL;
-}
+#ifdef USE_DFB__FLIPPING
+  if(dfbSurface && needsFlip)
+  {
+    dfbSurface->Flip( dfbSurface, NULL, (DFBSurfaceFlipFlags) DSFLIP_WAITFORSYNC );
 
+    needsFlip = false;
+  }
+#endif
+
+}
 
 void onTimer(uint32_t /*v*/)
 {
@@ -461,9 +396,40 @@ void onMousePassiveMotion(int32_t x, int32_t y)
   }
 }
 
-/*
+void onKeyboardDown(int32_t key, uint32_t flags)
+{
+  onKeyboard(key, flags, true);
+}
+
+void onKeyboardUp(int32_t key, uint32_t flags)
+{
+  onKeyboard(key, flags, false);
+}
+
+void onKeyboard(int32_t key, uint32_t flags, bool down)
+{
+  vector<pxWindowNative*> windowVector = pxWindow::getNativeWindows();
+  vector<pxWindowNative*>::iterator i;
+
+  for (i = windowVector.begin(); i < windowVector.end(); i++)
+  {
+    pxWindowNative* w = (*i);
+
+    if(down)
+    {
+      w->onKeyDown(keycodeFromNative((int)key), flags);
+    }
+    else
+    {
+       w->onKeyUp(keycodeFromNative((int)key), flags);
+    }
+  }
+}
+
 void onKeyboardSpecial(int key, int x, int y)
 {
+   (void) x; (void) y;
+
   int keycode = key;
   switch (key)
   {
@@ -503,17 +469,16 @@ void onKeyboardSpecial(int key, int x, int y)
     case DIKI_F12:
       keycode = PX_KEY_NATIVE_F12;
       break;
-
     case DIKI_LEFT:
       keycode = PX_KEY_NATIVE_LEFT;
       break;
-    case PX_KEY_NATIVE_UP:
+    case DIKI_UP:
       keycode = PX_KEY_NATIVE_UP;
       break;
-    case PX_KEY_NATIVE_RIGHT:
+    case DIKI_RIGHT:
       keycode = PX_KEY_NATIVE_RIGHT;
       break;
-    case PX_KEY_NATIVE_DOWN:
+    case DIKI_DOWN:
       keycode = PX_KEY_NATIVE_DOWN;
       break;
     case DIKI_PAGE_UP:
@@ -545,19 +510,10 @@ void onKeyboardSpecial(int key, int x, int y)
     w->onKeyUp(keycodeFromNative((int)keycode), 0);
   }
 }
-*/
 
-void onKeyboardDown(int32_t key, uint32_t flags)
-{
-  onKeyboard(key, flags, true);
-}
+//end DFB callbacks
 
-void onKeyboardUp(int32_t key, uint32_t flags)
-{
-  onKeyboard(key, flags, false);
-}
-
-void onKeyboard(int32_t key, uint32_t flags, bool down)
+void onEntry(int32_t state)
 {
   vector<pxWindowNative*> windowVector = pxWindow::getNativeWindows();
   vector<pxWindowNative*>::iterator i;
@@ -565,19 +521,11 @@ void onKeyboard(int32_t key, uint32_t flags, bool down)
   for (i = windowVector.begin(); i < windowVector.end(); i++)
   {
     pxWindowNative* w = (*i);
-
-    if(down)
-    {
-      w->onKeyDown(keycodeFromNative((int)key), flags);
-    }
-    else
-    {
-       w->onKeyUp(keycodeFromNative((int)key), flags);
-    }
+    if (state == DWET_LEAVE)
+      w->onMouseLeave();
   }
-}
 
-//end DFB callbacks
+}
 
 displayRef::displayRef()
 {
@@ -605,21 +553,6 @@ displayRef::~displayRef()
 dfbDisplay* displayRef::getDisplay() const
 {
   return mDisplay;
-}
-
-
-void displayRef::cleanupDfbDisplay()
-{
-  if (mDisplay != NULL)
-  {
-    delete mDisplay;
-  }
-  mDisplay = NULL;
-}
-
-pxWindowNative::~pxWindowNative()
-{
-  cleanupDfbWindow();
 }
 
 #ifdef USE_DFB_LAYER
@@ -725,13 +658,34 @@ pxError displayRef::createDfbDisplay()
 
 // SURFACE only...
 
+void displayRef::cleanupDfbDisplay()
+{
+  if (mDisplay != NULL)
+  {
+    delete mDisplay;
+  }
+  mDisplay = NULL;
+}
+
+pxWindowNative::~pxWindowNative()
+{
+  cleanupDfbWindow();
+}
+
+
 void pxWindowNative::createDfbWindow(int left, int top, int width, int height)
 {
   (void) left;  (void) top;
 
   // Fill the PRIMARY surface description.
   dfbDescription.flags       = (DFBSurfaceDescriptionFlags) (DSDESC_CAPS    | DSDESC_PIXELFORMAT | DSDESC_WIDTH | DSDESC_HEIGHT);
+
+#ifdef USE_DFB__FLIPPING
   dfbDescription.caps        = (DFBSurfaceCapabilities)     (DSCAPS_PRIMARY | DSCAPS_FLIPPING);
+#else
+  dfbDescription.caps        = (DFBSurfaceCapabilities)     (DSCAPS_PRIMARY);
+#endif
+
   dfbDescription.pixelformat = dfbPixelformat;
   dfbDescription.width       = width;
   dfbDescription.height      = height;
@@ -740,21 +694,20 @@ void pxWindowNative::createDfbWindow(int left, int top, int width, int height)
 
   DFB_CHECK(dfbSurface->GetPixelFormat( dfbSurface, &dfbPixelformat ));
 
-  int SW, SH;
+  int SW = 0, SH = 0;
 
   dfbSurface->GetSize( dfbSurface, &SW, &SH );
 
   printf("NOTE: WxH >> %d x %d ... pixelformat == %s \n", SW, SH, p2str(dfbPixelformat) );
 
   // Clear initially
-  DFB_CHECK( dfbSurface->Clear( dfbSurface, 0, 128, 120,  200 ) );
+  DFB_CHECK( dfbSurface->Clear( dfbSurface, 0, 0, 0,  0 ) );
 
   // Enable Alpha
- // DFB_CHECK (dfbSurface->SetBlittingFlags(dfbSurface, DSBLIT_BLEND_ALPHACHANNEL));
+//  DFB_CHECK (dfbSurface->SetBlittingFlags(dfbSurface, DSBLIT_BLEND_ALPHACHANNEL));
 
   printf("%s  >> Create() DFB: %p\n", __PRETTY_FUNCTION__, dfb);
 }
-
 
 
 pxError displayRef::createDfbDisplay()
@@ -787,8 +740,7 @@ pxError displayRef::createDfbDisplay()
   }
 
   // Create an event buffer with key capable devices attached.
-  DFB_CHECK( dfb->CreateInputEventBuffer( dfb, DICAPS_KEYS, DFB_FALSE, &dfbBuffer ) );
-  //DFB_CHECK( dfb->CreateInputEventBuffer( dfb, DICAPS_KEYS, DFB_FALSE, &dfbIBuffer ) );
+  DFB_CHECK( dfb->CreateInputEventBuffer( dfb, DICAPS_ALL, DFB_FALSE, &dfbBuffer ) );
 
   // Set the cooperative level to DFSCL_FULLSCREEN for exclusive access to the primary layer.
   DFB_CHECK(dfb->SetCooperativeLevel( dfb, DFSCL_NORMAL ));// DFSCL_FULLSCREEN ));  DFSCL_NORMAL
@@ -799,7 +751,7 @@ pxError displayRef::createDfbDisplay()
 
   return PX_OK;
 }
-#endif // NOT( USE_DFB_WINDOW )
+#endif // NOT( USE_DFB_LAYER )
 
 void pxWindowNative::cleanupDfbWindow()
 {
@@ -820,6 +772,7 @@ void pxWindowNative::cleanupDfbWindow()
   }
 #endif
 }
+
 
 pxError pxWindow::init(int left, int top, int width, int height)
 {
@@ -880,13 +833,13 @@ void pxWindow::setVisibility(bool visible)
   mVisible = visible;
   if (mVisible)
   {
-    dfbWindow->SetOpacity( dfbWindow, 0xff );
-    //    dfbShowWindow();
+      dfbWindow->SetOpacity( dfbWindow, 0xff );
+//    dfbShowWindow();
   }
   else
   {
     dfbWindow->SetOpacity( dfbWindow, 0x0 );
-    //    dfbHideWindow();
+//    dfbHideWindow();
   }
 #endif
 }
@@ -931,6 +884,8 @@ pxError pxWindow::endNativeDrawing(pxSurfaceNative& /*s*/)
   return PX_OK;
 }
 
+// pxWindowNative
+
 void pxWindowNative::onAnimationTimerInternal()
 {
   if (mTimerFPS)
@@ -944,9 +899,8 @@ void pxWindowNative::runEventLoop()
   exitFlag = false;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#ifdef USE_EVENT_THREAD
+#ifdef USE_DRAW_THREAD
 
-#if 1
   int fps = 60;// mTimerFPS;
 
   if( (draw_thread == NULL) &&
@@ -954,8 +908,6 @@ void pxWindowNative::runEventLoop()
   {
     fprintf(stderr, "Error creating thread\n");
   }
-#endif
-
 #endif
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -968,7 +920,7 @@ void pxWindowNative::exitEventLoop()
 
   printf("************************* %s\n",__PRETTY_FUNCTION__);// JUNK
 
-#ifdef USE_EVENT_THREAD
+#ifdef USE_DRAW_THREAD
   // wait for the draw thread to finish
   if(draw_thread && pthread_join(draw_thread, NULL))
   {
@@ -981,8 +933,8 @@ void pxWindowNative::exitEventLoop()
 
 void pxWindowNative::animateAndRender()
 {
-  static double     lastAnimationTime = pxMilliseconds();
-         double  currentAnimationTime = pxMilliseconds();
+  static double lastAnimationTime = pxMilliseconds();
+  double currentAnimationTime = pxMilliseconds();
 
   drawFrame();
 
@@ -991,9 +943,6 @@ void pxWindowNative::animateAndRender()
   if (mResizeFlag)
   {
     mResizeFlag = false;
-
- //   printf("*************************  ANIMATE_AND RENDER >>  onSize(%d, %d)  \n",mLastWidth, mLastHeight);// JUNK
-
     onSize(mLastWidth, mLastHeight);
     invalidateRectInternal(NULL);
   }
@@ -1051,6 +1000,43 @@ void pxWindowNative::unregisterWindow(pxWindowNative* p)
   }
 }
 
+void pxWindowNative::runEventLoopOnce()
+{
+   printf("************************* %s\n",__PRETTY_FUNCTION__);// JUNK
+/*
+   DFB_CHECK (dfbBuffer->WaitForEvent(dfbBuffer)); // Block waiting for next event...
+
+#ifdef USE_DFB_WINDOW
+
+   DFBWindowEvent wEvent = {};
+   DFBInputEvent  iEvent = {};
+
+   // Get any WINDOW events in case we need them
+   while (dfbBuffer->GetEvent(dfbBuffer, DFB_EVENT(&wEvent)) == DFB_OK)
+   {
+     ProcessWindowEvent( &wEvent);
+   }
+
+   // Get any INPUT events in case we need them
+   while (dfbIBuffer->GetEvent(dfbIBuffer, DFB_EVENT(&iEvent)) == DFB_OK)
+   {
+     ProcessInputEvent( &iEvent);
+   }
+
+
+#else
+
+   DFBInputEvent  iEvent;
+
+   // Get any INPUT events in case we need them
+   while (dfbBuffer->GetEvent(dfbBuffer, DFB_EVENT(&iEvent)) == DFB_OK)
+   {
+     ProcessInputEvent( &iEvent);
+   }
+#endif
+*/
+}
+
 
 char* p2str(DFBSurfacePixelFormat fmt)
 {
@@ -1103,3 +1089,83 @@ char* p2str(DFBSurfacePixelFormat fmt)
 
   return (char *) "NOT FOUND";
 }
+
+
+
+
+
+//#####
+
+#ifdef USE_EVENT_THREAD
+
+class Timer
+{
+    timeval timer[2];
+
+    struct timespec start_tm, end_tm;
+
+  public:
+
+    void start()
+    {
+        gettimeofday(&this->timer[0], NULL);
+    }
+
+    void stop()
+    {
+        gettimeofday(&this->timer[1], NULL);
+    }
+
+    long duration_ms() const // milliseconds
+    {
+        long secs( this->timer[1].tv_sec  - this->timer[0].tv_sec);
+        long usecs(this->timer[1].tv_usec - this->timer[0].tv_usec);
+
+        if(usecs < 0)
+        {
+            --secs;
+            usecs += 1000000;
+        }
+
+        return static_cast<long>( (secs * 1000) + ((double) usecs / 1000.0 + 0.5));
+    }
+};
+
+//#####
+
+void mysleep_ms(int32_t milisec)
+{
+    struct timespec res;
+
+    res.tv_sec  = (milisec / 1000);
+    res.tv_nsec = (milisec * 1000000) % 1000000000;
+
+    clock_nanosleep(CLOCK_MONOTONIC, 0, &res, NULL);
+}
+
+static Timer  timer;
+
+
+void *draw_func(void *ptr)
+{
+  float fps_rate = ptr ? *((int *) ptr) : 60.0;
+  float sleep_ms = (1.0/(float) fps_rate) * 1000.0;
+
+  printf("\n\n\n SET fps = %f    %f ms\n\n\n", fps_rate, sleep_ms);
+
+  while(!exitFlag)
+  {
+    timer.start();
+
+    onTimer(0);
+
+    timer.stop();
+
+  // schedule next timer event
+    mysleep_ms(sleep_ms - timer.duration_ms() );
+}
+
+  return NULL;
+}
+
+#endif // USE_EVENT_THREAD

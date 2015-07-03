@@ -1,7 +1,8 @@
 #include "jsCallback.h"
 #include "rtWrapperUtils.h"
 
-jsCallback::jsCallback()
+jsCallback::jsCallback(v8::Isolate* isolate)
+  : mIsolate(isolate)
 {
   mReq.data = this;
   mFunctionLookup = NULL;
@@ -17,36 +18,36 @@ void jsCallback::enqueue()
   uv_queue_work(uv_default_loop(), &mReq, &work, &doCallback);
 }
 
-void jsCallback::work(uv_work_t* req)
+void jsCallback::work(uv_work_t* /* req */)
 {
 }
 
-jsCallback* jsCallback::create()
-{ 
-  return new jsCallback();
+jsCallback* jsCallback::create(v8::Isolate* isolate)
+{
+  return new jsCallback(isolate);
 }
 
 jsCallback* jsCallback::addArg(const rtValue& val)
-{ 
+{
   mArgs.push_back(val);
-  return this; 
+  return this;
 }
 
 Handle<Value>* jsCallback::makeArgs()
 {
   Handle<Value>* args = new Handle<Value>[mArgs.size()];
   for (size_t i = 0; i < mArgs.size(); ++i)
-    args[i] = rt2js(mArgs[i]);
+    args[i] = rt2js(mIsolate, mArgs[i]);
   return args;
 }
 
 jsCallback* jsCallback::setFunctionLookup(jsIFunctionLookup* functionLookup)
-{ 
+{
   mFunctionLookup = functionLookup;
-  return this; 
+  return this;
 }
 
-void jsCallback::doCallback(uv_work_t* req, int status)
+void jsCallback::doCallback(uv_work_t* req, int /* status */)
 {
   jsCallback* ctx = reinterpret_cast<jsCallback *>(req->data);
   assert(ctx != NULL);
@@ -54,10 +55,29 @@ void jsCallback::doCallback(uv_work_t* req, int status)
 
   Handle<Value>* args = ctx->makeArgs();
 
-  // TODO: Should this be Local<Function>? 
-  Persistent<Function> callbackFunction = ctx->mFunctionLookup->lookup();
-  if (!callbackFunction.IsEmpty())
-    callbackFunction->Call(Context::GetCurrent()->Global(), static_cast<int>(ctx->mArgs.size()), args);
+  // TODO: This context is almost certainly wrong!!!
+  Local<Function> func = ctx->mFunctionLookup->lookup();
+  assert(!func.IsEmpty());
+  assert(!func->IsUndefined());
+
+  // This is really nice debugging
+  #if 0
+  Local<String> s = func->ToString();
+  String::Utf8Value v(s);
+  rtLogInfo("FUNC: %s", *v);
+  #endif
+
+  Local<Context> context = func->CreationContext();
+
+  TryCatch tryCatch;
+  if (!func.IsEmpty())
+    func->Call(context->Global(), static_cast<int>(ctx->mArgs.size()), args);
+
+  if (tryCatch.HasCaught())
+  {
+    String::Utf8Value trace(tryCatch.StackTrace());
+    rtLogWarn("%s", *trace);
+  }
 
   delete ctx;
   delete [] args;

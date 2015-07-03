@@ -90,6 +90,11 @@ void pxEventLoop::run()
     pxWindowNative::runEventLoop();
 }
 
+void pxEventLoop::runOnce()
+{
+  pxWindowNative::runEventLoopOnce();
+}
+
 void pxEventLoop::exit()
 {
     // For now we delegate off to the x11 pxWindowNative class
@@ -117,6 +122,8 @@ void usage()
 
 int main(int argc, char* argv[])
 {
+   (void) argc; (void) argv;
+
 #ifndef USE_DFB_TEST
 
     pxMain();
