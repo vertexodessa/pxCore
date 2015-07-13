@@ -951,7 +951,7 @@ static void drawImage92(float x, float y, float w, float h,
    float ih = texture->height();
 
    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-   // TOP ROW
+   // UPPER ROW
    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
    srcUL.x = 0;                   srcUM.x = x1;                    srcUR.x = x2;
@@ -1034,14 +1034,17 @@ static void drawImage92(float x, float y, float w, float h,
 
    texture->bindGLTexture(0);
 
+   // UPPER ROW
    DFB_CHECK(boundFramebuffer->StretchBlit(boundFramebuffer, boundTexture, &srcUL, &dstUL));
    DFB_CHECK(boundFramebuffer->StretchBlit(boundFramebuffer, boundTexture, &srcUM, &dstUM));
    DFB_CHECK(boundFramebuffer->StretchBlit(boundFramebuffer, boundTexture, &srcUR, &dstUR));
 
+   // MIDDLE ROW
    DFB_CHECK(boundFramebuffer->StretchBlit(boundFramebuffer, boundTexture, &srcML, &dstML));
    DFB_CHECK(boundFramebuffer->StretchBlit(boundFramebuffer, boundTexture, &srcMM, &dstMM));
    DFB_CHECK(boundFramebuffer->StretchBlit(boundFramebuffer, boundTexture, &srcMR, &dstMR));
 
+   // BOTTOM ROW
    DFB_CHECK(boundFramebuffer->StretchBlit(boundFramebuffer, boundTexture, &srcBL, &dstBL));
    DFB_CHECK(boundFramebuffer->StretchBlit(boundFramebuffer, boundTexture, &srcBM, &dstBM));
    DFB_CHECK(boundFramebuffer->StretchBlit(boundFramebuffer, boundTexture, &srcBR, &dstBR));
