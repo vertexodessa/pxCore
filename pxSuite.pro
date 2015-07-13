@@ -30,8 +30,8 @@ unix {
 
 message(" Here" $$PWD)
 
-unix:!macx: LIBS += -L$$PWD/../../build-pxCore-Desktop-Debug/ -lpxCore
+unix:!macx: LIBS += -L$$PWD/../../build-pxCore-Desktop-Debug -lpxCore
 
 
-INCLUDEPATH += $$PWD/../../../build-pxCore-Desktop_Qt_5_2_1_GCC_64bit-Debug
-DEPENDPATH += $$PWD/../../../build-pxCore-Desktop_Qt_5_2_1_GCC_64bit-Debug
+INCLUDEPATH += $$PWD/../../build-pxCore-Desktop-Debug
+DEPENDPATH += $$PWD/../../build-pxCore-Desktop-Debug

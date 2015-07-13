@@ -122,5 +122,4 @@ unix {
 
 message(" PWD >>>   " $$PWD)
 
-unix:!macx: LIBS += -L$$PWD/../../build-pxSuite-Desktop-Debug -lpxCore
-
+unix:!macx: LIBS += -L$$PWD/../../../build-pxSuite-Desktop-Debug -lpxCore
