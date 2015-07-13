@@ -81,8 +81,7 @@
       "defines": [
         "RT_PLATFORM_LINUX",
         "PX_PLATFORM_GENERIC_DFB"
-        "ENABLE_DFB",
-        "RUNINMAIN"
+        "ENABLE_DFB"
       ],
 
       'cflags!': [

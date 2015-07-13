@@ -187,8 +187,8 @@ if (argv.length >= 3) {
 */
     var fpsBg = scene.createRectangle({fillColor:0x00000080,lineColor:0xffff0080,lineWidth:3,x:10,y:10,a:0,parent:scene.root});
     var fpsCounter = scene.createText({x:5,textColor:0xffffffff,pixelSize:24,text:"0fps",parent:fpsBg});
-    fpsBg.w = fpsCounter.w+16;
-    fpsBg.h = fpsCounter.h;
+        fpsBg.w = fpsCounter.w+16;
+        fpsBg.h = fpsCounter.h;
 
     function updateSize(w, h) {
         childScene.w = w;

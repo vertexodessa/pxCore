@@ -20,7 +20,7 @@ unix {
 
     LIBS += -ldl -fPIC -lm
     LIBS += -L"./external/jpg/.libs" -ljpeg
-    LIBS += -L"../pxCore/examples/pxScene2d/external/png/.libs" -lpng16
+    LIBS += -L"./external/png/.libs" -lpng16
     LIBS += -L"./external/ft/objs/.libs" -lfreetype
     LIBS += -L"./external/curl/lib/.libs" -lcurl
 

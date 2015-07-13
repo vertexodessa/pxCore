@@ -41,7 +41,7 @@ private:
 
 int pxMain()
 {
-#if 0
+#if 1
    int width = 1280;
    int height = 720;
 #else

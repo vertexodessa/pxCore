@@ -117,13 +117,10 @@ unix {
     LIBS += -L"./external/curl/lib/.libs" -lcurl
 
     LIBS += -L"/usr/local/lib" -ldirectfb -lpthread
-  #  LIBS += -L"../../pxCore/build/x11" -lpxCore
+ #   LIBS += -L"../../pxCore/build/x11" -lpxCore
 }
 
-message(" Here" $$PWD)
+message(" PWD >>>   " $$PWD)
 
-unix:!macx: LIBS += -L$$PWD/../../build-pxCore-Desktop-Debug/ -lpxCore
+unix:!macx: LIBS += -L$$PWD/../../build-pxSuite-Desktop-Debug -lpxCore
 
-
-INCLUDEPATH += $$PWD/../../../build-pxCore-Desktop_Qt_5_2_1_GCC_64bit-Debug
-DEPENDPATH += $$PWD/../../../build-pxCore-Desktop_Qt_5_2_1_GCC_64bit-Debug

@@ -15,10 +15,12 @@ pxScene2dRef scene;
 
 //#define USE_RECTANGLE
 
-#define USE_BG
-#define USE_BG_RADIAL
-#define USE_TEXT
-#define USE_PICTURE
+//#define USE_BG
+//#define USE_BG_RADIAL
+//#define USE_TEXT
+//#define USE_PICTURE
+//#define USE_RECTANGLE
+#define USE_IMAGE9
 
 #if 0
 
@@ -318,6 +320,8 @@ struct callbackCtx
   rtObjectRef bg1;
   rtObjectRef bg2;
   rtObjectRef picture;
+  rtObjectRef rectangle;
+  rtObjectRef image9;
 };
 
 rtString bananaURL;
@@ -331,10 +335,10 @@ rtError onSizeCB(int numArgs, const rtValue* args, rtValue* /*result*/, void* co
   { 
     rtObjectRef e = args[0].toObject();
 
+#ifdef USE_BG
     int w = e.get<uint32_t>("w");
     int h = e.get<uint32_t>("h");
 
-#ifdef USE_BG
     rtObjectRef& bg1 = ctx->bg1;
 
     bg1.set("w", w);
@@ -392,16 +396,16 @@ pxViewRef testScene()
   rtGetCurrentDirectory(d);
 
 
-#ifdef USE_RECTANGLE
-  rtRefT<rectangle> r = new rectangle();
+//#ifdef USE_RECTANGLE
+//  rtRefT<rectangle> r = new rectangle();
 
-  float c1[4] = {1,0,0,1};
-  float c2[4] = {1,1,1,0.5};
+//  float c1[4] = {1,0,0,1};
+//  float c2[4] = {1,1,1,0.5};
 
-  r->setFillColor(c1);
-  r->setLineColor(c2);
-  r->setLineWidth(10);
-#endif
+//  r->setFillColor(c1);
+//  r->setLineColor(c2);
+//  r->setLineWidth(10);
+//#endif
 
 #ifdef USE_PICTURE
 
@@ -418,15 +422,15 @@ pxViewRef testScene()
   root.send("on",  "onKeyDown", new rtFunctionCallback(onKeyDownCB,ctx));
   scene.send("on", "onResize",  new rtFunctionCallback(onSizeCB,ctx));
 
-  rtString bgURL;
+  rtString imgURL;
 
 #ifdef USE_BG
   rtObjectRef& bg1 = ctx->bg1;
 
   scene.sendReturns<rtObjectRef>("createImage", bg1);
-  bgURL = d;
-  bgURL.append("/../images/skulls.png");
-  bg1.set("url", bgURL);
+  imgURL = d;
+  imgURL.append("/../images/skulls.png");
+  bg1.set("url", imgURL);
   bg1.set("xStretch", 2);
   bg1.set("yStretch", 2);
   bg1.set("parent", root);
@@ -436,7 +440,7 @@ pxViewRef testScene()
 
 //  printf("HUGH:  bananaURL = [%s]\n", bananaURL.cString());
 //  printf("HUGH:  ballURL   = [%s]\n", ballURL.cString());
-//  printf("HUGH:  bg1       = [%s]\n", bgURL.cString());
+//  printf("HUGH:  bg1       = [%s]\n", imgURL.cString());
 
 #if 0
   printf("Try enumerating properties on image.\n");
@@ -453,9 +457,9 @@ pxViewRef testScene()
   rtObjectRef& bg2 = ctx->bg2;
 
   scene.sendReturns<rtObjectRef>("createImage", bg2);
-  bgURL = d;
-  bgURL.append("/../images/radial_gradient.png");
-  bg2.set("url", bgURL);
+  imgURL = d;
+  imgURL.append("/../images/radial_gradient.png");
+  bg2.set("url", imgURL);
   bg2.set("xStretch", 1);
   bg2.set("yStretch", 1);
   bg2.set("parent", root);
@@ -488,6 +492,45 @@ pxViewRef testScene()
   picture.set("parent", root);
 
   #endif // USE_PICTURE
+
+
+#ifdef USE_RECTANGLE
+  rtObjectRef& rectangle = ctx->rectangle;
+
+  scene.sendReturns<rtObjectRef>("createRectangle", rectangle);
+  rectangle.set("x", 5);
+  rectangle.set("y", 5);
+  rectangle.set("w", 30);
+  rectangle.set("h", 60);
+  rectangle.set("fillColor", 0xFF0000FF);
+  rectangle.set("lineColor", 0x00FF00FF);
+  rectangle.set("lineWidth", 10);
+  rectangle.set("parent", root);
+
+#endif // USE_RECTANGLE
+
+
+#ifdef USE_IMAGE9
+  rtObjectRef& image9 = ctx->image9;
+
+  scene.sendReturns<rtObjectRef>("createImage9", image9);
+  imgURL = d;
+  imgURL.append("/../images/curve_rectangle.png");
+  image9.set("url", imgURL);
+  image9.set("x", 100);
+  image9.set("y", 100);
+  image9.set("x1", 65);
+  image9.set("y1", 65);
+  image9.set("x2",190);
+  image9.set("y2",190);
+  image9.set("w", 1200);
+  image9.set("h", 300);
+  image9.set("parent", root);
+
+#endif // USE_RECTANGLE
+
+
+
 
 #if 0
 

@@ -16,11 +16,11 @@
 
 #define DFB_PX_CORE_FPS 30
 
-//#define USE_DFB__FLIPPING
+#define USE_DFB_FLIPPING
 //#define USE_DFB_WINDOW
 //#define USE_DFB_LAYER
-//#define USE_EVENT_THREAD
-//#define USE_DRAW_THREAD
+
+#define USE_DRAW_THREAD
 
 IDirectFB              *dfb         = NULL;
 
@@ -38,7 +38,7 @@ IDirectFBEventBuffer   *dfbBuffer   = NULL;
 
 #ifdef USE_DFB_WINDOW
 IDirectFBEventBuffer   *dfbIBuffer  = NULL;
-//IDirectFBInputDevice   *dfbKeyboard = NULL;
+IDirectFBInputDevice   *dfbKeyboard = NULL;
 #endif
 
 
@@ -60,7 +60,7 @@ DFBSurfacePixelFormat  dfbPixelformat = DFBSurfacePixelFormat(DSPF_ABGR); // DSP
 DFBSurfacePixelFormat  dfbPixelformat = DSPF_ABGR;//DSPF_ABGR; //DFBSurfacePixelFormat(0);
 #endif
 
-#ifdef USE_EVENT_THREAD
+#ifdef USE_DRAW_THREAD
 static pthread_t draw_thread;
 #endif
 
@@ -257,8 +257,8 @@ void eventLoop()
 
 #ifdef USE_DFB_WINDOW
 
-    DFBWindowEvent wEvent = {};
-    DFBInputEvent  iEvent = {};
+    DFBWindowEvent wEvent;
+    DFBInputEvent  iEvent;
 
     // Get any WINDOW events in case we need them
     while (dfbBuffer->GetEvent(dfbBuffer, DFB_EVENT(&wEvent)) == DFB_OK)
@@ -300,7 +300,7 @@ void display()
     w->animateAndRender();
   }
 
-#ifdef USE_DFB__FLIPPING
+#ifdef USE_DFB_FLIPPING
   if(dfbSurface && needsFlip)
   {
     dfbSurface->Flip( dfbSurface, NULL, (DFBSurfaceFlipFlags) DSFLIP_WAITFORSYNC );
@@ -680,7 +680,7 @@ void pxWindowNative::createDfbWindow(int left, int top, int width, int height)
   // Fill the PRIMARY surface description.
   dfbDescription.flags       = (DFBSurfaceDescriptionFlags) (DSDESC_CAPS    | DSDESC_PIXELFORMAT | DSDESC_WIDTH | DSDESC_HEIGHT);
 
-#ifdef USE_DFB__FLIPPING
+#ifdef USE_DFB_FLIPPING
   dfbDescription.caps        = (DFBSurfaceCapabilities)     (DSCAPS_PRIMARY | DSCAPS_FLIPPING);
 #else
   dfbDescription.caps        = (DFBSurfaceCapabilities)     (DSCAPS_PRIMARY);
@@ -704,9 +704,7 @@ void pxWindowNative::createDfbWindow(int left, int top, int width, int height)
   DFB_CHECK( dfbSurface->Clear( dfbSurface, 0, 0, 0,  0 ) );
 
   // Enable Alpha
-//  DFB_CHECK (dfbSurface->SetBlittingFlags(dfbSurface, DSBLIT_BLEND_ALPHACHANNEL));
-
-  printf("%s  >> Create() DFB: %p\n", __PRETTY_FUNCTION__, dfb);
+  DFB_CHECK (dfbSurface->SetBlittingFlags(dfbSurface, DSBLIT_BLEND_ALPHACHANNEL));
 }
 
 
@@ -730,6 +728,10 @@ pxError displayRef::createDfbDisplay()
   //  DirectFBSetOption ("gfxcard-stats", NULL);
 
 //DirectFBSetOption ("forcepremultiplied", NULL);
+
+#ifndef USE_DFB_FLIPPING
+  DirectFBSetOption ("autoflip-window",   "true");
+#endif
 
   DirectFBCreate( &dfb );
 
@@ -849,18 +851,6 @@ pxError pxWindow::setAnimationFPS(uint32_t fps)
   mTimerFPS = (int) fps;
   mLastAnimationTime = pxMilliseconds();
 
-  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#ifdef USE_EVENT_THREAD
-//  if(fps > 0)
-//  {
-//    if(draw_thread == NULL && pthread_create(&draw_thread, NULL, &draw_func, (void *) &mTimerFPS))
-//    {
-//      fprintf(stderr, "Error creating thread\n");
-//    }
-//  }
-#endif
-  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
   return PX_OK;
 }
 
@@ -917,6 +907,8 @@ void pxWindowNative::runEventLoop()
 void pxWindowNative::exitEventLoop()
 {
   exitFlag = true;
+
+  DFB_CHECK (dfbBuffer->WakeUp(dfbBuffer)); // Unblock
 
   printf("************************* %s\n",__PRETTY_FUNCTION__);// JUNK
 
@@ -1096,7 +1088,7 @@ char* p2str(DFBSurfacePixelFormat fmt)
 
 //#####
 
-#ifdef USE_EVENT_THREAD
+#ifdef USE_DRAW_THREAD
 
 class Timer
 {
@@ -1168,4 +1160,4 @@ void *draw_func(void *ptr)
   return NULL;
 }
 
-#endif // USE_EVENT_THREAD
+#endif // USE_DRAW_THREAD

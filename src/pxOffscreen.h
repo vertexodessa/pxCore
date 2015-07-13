@@ -8,7 +8,6 @@
 #include "pxCore.h"
 #include "pxBuffer.h"
 
-
 // Class used to create and manage offscreen pixmaps
 // This class subclasses pxBuffer (pxBuffer.h)
 // Please refer to pxBuffer.h for additional methods
@@ -25,10 +24,10 @@ public:
     
   // This will initialize the offscreen for the given height and width and
   // will clear it with the provided color.
-  pxError initWithColor(int32_t width, int32_t height, const pxColor& color);
+  pxError initWithColor(int width, int height, const pxColor& color);
   
-  pxError term();  
-};
+  pxError term();
 
+};
 
 #endif // PXOFFSCREEN_H

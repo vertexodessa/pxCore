@@ -175,6 +175,8 @@ void pxTextureCacheObject::loadImage(rtString url)
     setStatus(RT_TEXTURE_STATUS_OK);
     if (mParent != NULL)
     {
+      rtLogWarn("Image texture ready [%s].", url.cString());
+
       mParent->onTextureReady(this, RT_OK);
     }
   }
@@ -206,7 +208,7 @@ void pxTextureCacheObject::loadImage(rtString url)
       rtError loadImageSuccess = pxLoadImage(s, imageOffscreen);
       if ( loadImageSuccess != RT_OK)
       {
-        rtLogWarn("image load failed"); // TODO: why?
+        rtLogWarn("image load failed [%s].", url.cString()); // TODO: why?
         int errorCode = RT_TEXTURE_STATUS_DECODE_FAILURE;
         if (loadImageSuccess == RT_RESOURCE_NOT_FOUND)
         {
@@ -223,6 +225,9 @@ void pxTextureCacheObject::loadImage(rtString url)
         mTexture = context.createTexture(imageOffscreen);
         gCompleteTextureCache.insert(pair<rtString,pxTextureRef>(s, mTexture));
         setStatus(RT_TEXTURE_STATUS_OK);
+
+        rtLogWarn("image load success [%s].", url.cString());
+
         if (mParent != NULL)
         {
           mParent->onTextureReady(this, RT_OK);

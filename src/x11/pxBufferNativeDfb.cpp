@@ -30,9 +30,9 @@ extern DFBSurfacePixelFormat  dfbPixelformat;
 //---------------------------------------------------------------
 
 
-void pxBuffer::blit(pxSurfaceNative s, int dstLeft, int dstTop,
-                    int dstWidth, int dstHeight,
-                    int srcLeft, int srcTop)
+void pxBuffer::blit(pxSurfaceNative s, int32_t dstLeft, int32_t dstTop,
+                    int32_t dstWidth, int32_t dstHeight,
+                    int32_t srcLeft, int32_t srcTop)
 #if 1
 {
    pxWindow* w = (pxWindow*)s;

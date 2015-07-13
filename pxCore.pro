@@ -10,6 +10,9 @@ QT       -= gui
 TARGET = pxCore
 TEMPLATE = lib
 
+CONFIG += staticlib
+CONFIG -= qt
+
 DEFINES += PXCORE_LIBRARY
 DEFINES += ENABLE_DFB
 DEFINES += PX_PLATFORM_X11
@@ -20,16 +23,15 @@ SOURCES += \
     src/pxWindowUtil.cpp
 
 HEADERS +=\
-        pxcore_global.h \
     src/pxBuffer.h \
-    src/pxColors.h \
+    src/pxColor.h \
     src/pxConfig.h \
     src/pxCore.h \
     src/pxEventLoop.h \
     src/pxIView.h \
     src/pxKeycodes.h \
     src/pxOffscreen.h \
-    src/pxPixels.h \
+    src/pxPixel.h \
     src/pxRect.h \
     src/pxTimer.h \
     src/pxViewWindow.h \

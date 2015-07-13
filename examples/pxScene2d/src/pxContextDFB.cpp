@@ -61,7 +61,7 @@ static float gAlpha = 1.0;
 
 static IDirectFBSurface       *boundMask;
 static IDirectFBSurface       *boundTexture;
-static IDirectFBSurface       *boundFramebuffer;
+static IDirectFBSurface       *boundFramebuffer = dfbSurface; // default
 
 void premultiply(float* d, const float* s)
 {
@@ -339,7 +339,7 @@ public:
 //     {
 //        boundTexture = mTexture;
 
-//        mTexture->Dump(texture,
+//        mTexture->Dump(mTexture,
 //                      "/home/hfitzpatrick/projects/xre2/image_dumps",
 //                      "image_");
 //     }
@@ -531,7 +531,7 @@ public:
       // TODO Moved this to bindTexture because of more pain from JS thread calls
       createTexture(w, h, iw, ih);
 
-      //JUNK
+//      //JUNK
 //       if(mTexture)
 //       {
 //          boundTexture = mTexture;
@@ -540,7 +540,7 @@ public:
 //                        "/home/hfitzpatrick/projects/xre2/image_dumps",
 //                        "image_alpha_");
 //       }
-      //JUNK
+//      //JUNK
    }
 
    ~pxTextureAlpha()
@@ -677,7 +677,6 @@ private:
 
 //====================================================================================================================================================================================
 
-
 static void drawRect2(float x, float y, float w, float h, const float* c)
 {
    const float verts[4][2] =
@@ -716,14 +715,19 @@ static void drawRectOutline(float x, float y, float w, float h, float lw, const 
                                                     colorPM[1] * 255.0,
                                                     colorPM[2] * 255.0,
                                                     colorPM[3] * 255.0));
+   if(lw >= w)
+   {
+      lw = 0;
+   }
+
    float half = lw/2;
 
-   DFB_CHECK( boundTexture->FillRectangle( boundTexture, x-half, y-half,     lw + w, lw    ) ); // TOP
-   DFB_CHECK( boundTexture->FillRectangle( boundTexture, x-half, y-half + h, lw + w, lw    ) ); // BOTTOM
-   DFB_CHECK( boundTexture->FillRectangle( boundTexture, x-half, y-half,     lw,     lw + h) ); // LEFT
-   DFB_CHECK( boundTexture->FillRectangle( boundTexture, w-half, y-half,     lw,     lw + h) ); // RIGHT
+   DFB_CHECK( boundTexture->FillRectangle( boundTexture, x-half,     y-half,     lw + w, lw    ) ); // TOP
+   DFB_CHECK( boundTexture->FillRectangle( boundTexture, x-half,     y-half + h, lw + w, lw    ) ); // BOTTOM
+   DFB_CHECK( boundTexture->FillRectangle( boundTexture, x-half,     y-half,     lw,     lw + h) ); // LEFT
+   DFB_CHECK( boundTexture->FillRectangle( boundTexture, x-half + w, y-half,     lw,     lw + h) ); // RIGHT
 
-   //needsFlip = true;
+   needsFlip = true;
 }
 
 static void drawImageTexture(float x, float y, float w, float h, pxTextureRef texture,
@@ -731,7 +735,16 @@ static void drawImageTexture(float x, float y, float w, float h, pxTextureRef te
 {
    if (texture.getPtr() == NULL)
    {
+      rtLogError("ERROR: drawImageTexture() >>> texture: NULL   BAD !");
       return;
+   }
+
+   if (boundFramebuffer == NULL)
+   {
+      rtLogError("ERROR: drawImageTexture() >>> boundFrame: NULL   BAD !");
+
+      boundFramebuffer = dfbSurface;
+     // return;
    }
 
    float iw = texture->width();
@@ -825,9 +838,17 @@ static void drawImageTexture(float x, float y, float w, float h, pxTextureRef te
 
    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+  // if (!boundFramebuffer)
+  // {
+  //    rtLogError("ERROR:  the boundFramebuffer surface is NULL !");
+  //
+  //    boundFramebuffer = dfbSurface; // default
+  //    //return;
+  // }
+
    if (!currentFramebuffer)
    {
-      rtLogFatal("FATAL:  the current render surface is NULL !");
+      rtLogError("ERROR:  the currentFramebuffer surface is NULL !");
       return;
    }
 
@@ -873,9 +894,9 @@ static void drawImageTexture(float x, float y, float w, float h, pxTextureRef te
 
    if(texture->getType() == PX_TEXTURE_ALPHA)
    {
-      boundTexture->Dump(boundTexture,
-                     "/home/hfitzpatrick/projects/xre2/image_dumps",
-                     "image_glphs_");
+//      boundTexture->Dump(boundTexture,
+//                     "/home/hfitzpatrick/projects/xre2/image_dumps",
+//                     "image_glphs_");
 
       DFB_CHECK(boundFramebuffer->SetBlittingFlags(boundFramebuffer, (DFBSurfaceBlittingFlags) (DSBLIT_COLORIZE | DSBLIT_BLEND_ALPHACHANNEL) ));
 
@@ -905,7 +926,6 @@ static void drawImageTexture(float x, float y, float w, float h, pxTextureRef te
    {
       DFB_CHECK(boundFramebuffer->SetBlittingFlags(boundFramebuffer, (DFBSurfaceBlittingFlags) (DSBLIT_BLEND_ALPHACHANNEL) ));
    }
-
 #endif
 }
 
@@ -915,107 +935,116 @@ static void drawImage92(float x, float y, float w, float h,
    if (texture.getPtr() == NULL)
      return;
 
-   float ox1 = x;
-   float ix1 = x+x1;
-   float ix2 = x+w-x2;
-   float ox2 = x+w;
+   DFBRectangle srcUL, dstUL; // Upper Left;
+   DFBRectangle srcUM, dstUM; // Upper Middle;
+   DFBRectangle srcUR, dstUR; // Upper Right
 
-   float oy1 = y;
-   float iy1 = y+y1;
-   float iy2 = y+h-y2;
-   float oy2 = y+h;
+   DFBRectangle srcML, dstML; // Middle Left;
+   DFBRectangle srcMM, dstMM; // Middle Middle;
+   DFBRectangle srcMR, dstMR; // Middle Right
 
-   float w2 = texture->width();
-   float h2 = texture->height();
+   DFBRectangle srcBL, dstBL; // Bottom Left;
+   DFBRectangle srcBM, dstBM; // Bottom Middle;
+   DFBRectangle srcBR, dstBR; // Bottom Right
 
-   float ou1 = 0;
-   float iu1 = x1/w2;
-   float iu2 = (w2-x2)/w2;
-   float ou2 = 1;
+   float iw = texture->width();
+   float ih = texture->height();
 
-   float ov2 = 0;
-   float iv2 = y1/h2;
-   float iv1 = (h2-y2)/h2;
-   float ov1 = 1;
+   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   // TOP ROW
+   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-#if 1 // sanitize values
-   iu1 = pxClamp<float>(iu1, 0, 1);
-   iu2 = pxClamp<float>(iu2, 0, 1);
-   iv1 = pxClamp<float>(iv1, 0, 1);
-   iv2 = pxClamp<float>(iv2, 0, 1);
+   srcUL.x = 0;                   srcUM.x = x1;                    srcUR.x = x2;
+   srcUL.y = 0;                   srcUM.y = 0;                     srcUR.y = 0;
+   srcUL.w = x1;                  srcUM.w = (x2 - x1);             srcUR.w = iw - x2;
+   srcUL.h = y1;                  srcUM.h = y1;                    srcUR.h = y1;
 
-   float tmin, tmax;
+   dstUL.x = x;
+   dstUL.y = y;
+   dstUL.w = x1;
+   dstUL.h = y1;
 
-   tmin = pxMin<float>(iu1, iu2);
-   tmax = pxMax<float>(iu1, iu2);
-   iu1 = tmin;
-   iu2 = tmax;
+   dstUM.x = dstUL.x + dstUL.w;
+   dstUM.y = dstUL.y;
+   dstUM.w = w - (iw - x2) - x1;
+   dstUM.h = y1;
 
-   tmin = pxMin<float>(iv1, iv2);
-   tmax = pxMax<float>(iv1, iv2);
-   iv1 = tmax;
-   iv2 = tmin;
+   dstUR.x = dstUM.x + dstUM.w;
+   dstUR.y = dstUL.y;
+   dstUR.w = (iw - x2);
+   dstUR.h = y1;
 
-#endif
+   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   // MIDDLE ROW
+   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  const float verts[22][2] =
-     {
-       { ox1,oy1 },
-       { ix1,oy1 },
-       { ox1,iy1 },
-       { ix1,iy1 },
-       { ox1,iy2 },
-       { ix1,iy2 },
-       { ox1,oy2 },
-       { ix1,oy2 },
-       { ix2,oy2 },
-       { ix1,iy2 },
-       { ix2,iy2 },
-       { ix1,iy1 },
-       { ix2,iy1 },
-       { ix1,oy1 },
-       { ix2,oy1 },
-       { ox2,oy1 },
-       { ix2,iy1 },
-       { ox2,iy1 },
-       { ix2,iy2 },
-       { ox2,iy2 },
-       { ix2,oy2 },
-       { ox2,oy2 }
-     };
+   srcML.x = 0;                   srcMM.x = x1;                   srcMR.x = x2;
+   srcML.y = y1;                  srcMM.y = y1 ;                  srcMR.y = y1;
+   srcML.w = x1;                  srcMM.w = (x2 - x1);            srcMR.w = (iw - x2);
+   srcML.h = (y2 - y1);           srcMM.h = (y2 - y1);            srcMR.h = (y2 - y1);
 
-  const float uv[22][2] =
-     {
-       { ou1,ov1 },
-       { iu1,ov1 },
-       { ou1,iv1 },
-       { iu1,iv1 },
-       { ou1,iv2 },
-       { iu1,iv2 },
-       { ou1,ov2 },
-       { iu1,ov2 },
-       { iu2,ov2 },
-       { iu1,iv2 },
-       { iu2,iv2 },
-       { iu1,iv1 },
-       { iu2,iv1 },
-       { iu1,ov1 },
-       { iu2,ov1 },
-       { ou2,ov1 },
-       { iu2,iv1 },
-       { ou2,iv1 },
-       { iu2,iv2 },
-       { ou2,iv2 },
-       { iu2,ov2 },
-       { ou2,ov2 }
-     };
+   dstML.x = dstUL.x;
+   dstML.y = dstUL.y + dstUL.h;
+   dstML.w = dstUL.w;
+   dstML.h = h - (ih - y2) - y1;  // ##
 
-#warning TODO - draw the 9 slice !!
+   dstMM.x = dstUM.x;
+   dstMM.y = dstUM.y + dstUM.h;
+   dstMM.w = dstUM.w;
+   dstMM.h = dstML.h;
 
-     (void) verts; // warning
-     (void) uv;    // warning
+   dstMR.x = dstUR.x;
+   dstMR.y = dstUR.y + dstUR.h;
+   dstMR.w = dstUR.w;
+   dstMR.h = dstML.h;
 
-//     gTextureShader->draw(gResW,gResH,gMatrix.data(),gAlpha,22,verts,uv,texture,PX_NONE,PX_NONE);
+   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   // BOTTOM ROW
+   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+   srcBL.x = 0;                   srcBM.x = x1;                   srcBR.x = x2;
+   srcBL.y = y2;                  srcBM.y = y2;                   srcBR.y = y2;
+   srcBL.w = x1;                  srcBM.w = (x2 - x1);            srcBR.w = (iw - x2);
+   srcBL.h = (ih - y2);           srcBM.h = (ih - y2);            srcBR.h = (ih - y2);
+
+   dstBL.x = dstUL.x;
+   dstBL.y = dstML.y + dstML.h;
+   dstBL.w = dstUL.w;
+   dstBL.h = (ih - y2);   // ##
+
+   dstBM.x = dstMM.x;
+   dstBM.y = dstMM.y + dstMM.h;
+   dstBM.w = dstMM.w;
+   dstBM.h = dstBL.h;
+
+   dstBR.x = dstMR.x;
+   dstBR.y = dstMR.y + dstMR.h;
+   dstBR.w = dstMR.w;
+   dstBR.h = dstBL.h;
+
+   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+   if (boundFramebuffer == NULL)
+   {
+      rtLogError("ERROR: drawImage92() >>> boundFrame: NULL   BAD !");
+
+      boundFramebuffer = dfbSurface;
+     // return;
+   }
+
+   texture->bindGLTexture(0);
+
+   DFB_CHECK(boundFramebuffer->StretchBlit(boundFramebuffer, boundTexture, &srcUL, &dstUL));
+   DFB_CHECK(boundFramebuffer->StretchBlit(boundFramebuffer, boundTexture, &srcUM, &dstUM));
+   DFB_CHECK(boundFramebuffer->StretchBlit(boundFramebuffer, boundTexture, &srcUR, &dstUR));
+
+   DFB_CHECK(boundFramebuffer->StretchBlit(boundFramebuffer, boundTexture, &srcML, &dstML));
+   DFB_CHECK(boundFramebuffer->StretchBlit(boundFramebuffer, boundTexture, &srcMM, &dstMM));
+   DFB_CHECK(boundFramebuffer->StretchBlit(boundFramebuffer, boundTexture, &srcMR, &dstMR));
+
+   DFB_CHECK(boundFramebuffer->StretchBlit(boundFramebuffer, boundTexture, &srcBL, &dstBL));
+   DFB_CHECK(boundFramebuffer->StretchBlit(boundFramebuffer, boundTexture, &srcBM, &dstBM));
+   DFB_CHECK(boundFramebuffer->StretchBlit(boundFramebuffer, boundTexture, &srcBR, &dstBR));
 }
 
 bool gContextInit = false;
@@ -1134,6 +1163,7 @@ pxError pxContext::setFramebuffer(pxContextFramebufferRef fbo)
       // TODO probably need to save off the original FBO handle rather than assuming zero
 
 boundFramebuffer = dfbSurface;//default
+
       currentFramebuffer = defaultFramebuffer;
 
       pxContextState contextState;
