@@ -531,6 +531,19 @@ pxViewRef testScene()
 
 //  var slice9 = scene.createImage9({url:slice9url, x:450, y:100, x1:65, y1:65, x2:190, y1:190, w:170, h:170, parent:root});
 
+
+  rtObjectRef& child = ctx->rectangle;
+
+  scene.sendReturns<rtObjectRef>("createRectangle", child);
+  child.set("x", 5);
+  child.set("y", 5);
+  child.set("w", 30);
+  child.set("h", 30);
+  child.set("fillColor", 0x0000FFFF);
+//  child.set("lineColor", 0x00FF00FF);
+//  child.set("lineWidth", 10);
+  child.set("parent", image9);
+
 #endif // USE_RECTANGLE
 
 

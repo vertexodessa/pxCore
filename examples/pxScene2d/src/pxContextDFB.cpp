@@ -716,9 +716,9 @@ static void drawRect2(float x, float y, float w, float h, const float* c)
    premultiply(colorPM,c);
 
    DFB_CHECK( boundFramebuffer->SetColor( boundFramebuffer, colorPM[0] * 255.0, // RGBA
-                                                    colorPM[1] * 255.0,
-                                                    colorPM[2] * 255.0,
-                                                    colorPM[3] * 255.0));
+                                                            colorPM[1] * 255.0,
+                                                            colorPM[2] * 255.0,
+                                                            colorPM[3] * 255.0));
 
    DFB_CHECK( boundFramebuffer->FillRectangle( boundFramebuffer, x, y, w, h));
 }
@@ -735,9 +735,9 @@ static void drawRectOutline(float x, float y, float w, float h, float lw, const 
    premultiply(colorPM, c);
 
    DFB_CHECK( boundFramebuffer->SetColor(  boundFramebuffer, colorPM[0] * 255.0, // RGBA
-                                                    colorPM[1] * 255.0,
-                                                    colorPM[2] * 255.0,
-                                                    colorPM[3] * 255.0));
+                                                             colorPM[1] * 255.0,
+                                                             colorPM[2] * 255.0,
+                                                             colorPM[3] * 255.0));
    if(lw >= w)
    {
       lw = 0;
@@ -758,7 +758,7 @@ static void drawImageTexture(float x, float y, float w, float h, pxTextureRef te
 {
    if (texture.getPtr() == NULL)
    {
-      rtLogError("ERROR: drawImageTexture() >>> texture: NULL   BAD !");
+      //rtLogError("ERROR: drawImageTexture() >>> texture: NULL   BAD !");
       return;
    }
 
@@ -867,8 +867,8 @@ static void drawImageTexture(float x, float y, float w, float h, pxTextureRef te
 
    rcSrc.x = 0;
    rcSrc.y = 0;
-   rcSrc.w = iw;//currentFramebuffer->width();
-   rcSrc.h = ih;//currentFramebuffer->height();
+   rcSrc.w = currentFramebuffer->width();
+   rcSrc.h = currentFramebuffer->height();
 
    DFBRectangle rcDst;
 
@@ -912,9 +912,9 @@ static void drawImageTexture(float x, float y, float w, float h, pxTextureRef te
       DFB_CHECK(boundFramebuffer->SetBlittingFlags(boundFramebuffer, (DFBSurfaceBlittingFlags) (DSBLIT_COLORIZE | DSBLIT_BLEND_ALPHACHANNEL) ));
 
       DFB_CHECK(boundFramebuffer->SetColor( boundFramebuffer, colorPM[0] * 255.0, // RGBA
-                                                  colorPM[1] * 255.0,
-                                                  colorPM[2] * 255.0,
-                                                  colorPM[3] * 255.0));
+                                                              colorPM[1] * 255.0,
+                                                              colorPM[2] * 255.0,
+                                                              colorPM[3] * 255.0));
    }
 
    if(xStretch == PX_REPEAT || yStretch == PX_REPEAT)
@@ -1068,15 +1068,15 @@ void pxContext::clear(int /*w*/, int /*h*/)
       return;
    }
 
-   //DFB_CHECK( dfbSurface->Clear( dfbSurface, 0x00, 0x00, 0x00, 0x00 )         ); // TRANSPARENT
-   DFB_CHECK( dfbSurface->Clear( dfbSurface, 0x00, 0x00, 0xFF, 0xFF )       );  //  CLEAR_BLUE   << JUNK
+   DFB_CHECK( dfbSurface->Clear( dfbSurface, 0x00, 0x00, 0x00, 0x00 )         ); // TRANSPARENT
+   //DFB_CHECK( dfbSurface->Clear( dfbSurface, 0x00, 0x00, 0xFF, 0xFF )       );  //  CLEAR_BLUE   << JUNK
 }
 
 void pxContext::setMatrix(pxMatrix4f& m)
 {
    gMatrix.multiply(m);
 
-   const float *mm = m.data();
+   const float *mm = gMatrix.data();
 
    s32 matrix[9];
 
