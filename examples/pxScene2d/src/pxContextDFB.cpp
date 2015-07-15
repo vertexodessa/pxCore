@@ -58,10 +58,10 @@ static float gAlpha = 1.0;
 
 //====================================================================================================================================================================================
 
-
-static IDirectFBSurface       *boundMask;
-static IDirectFBSurface       *boundTexture;
-static IDirectFBSurface       *boundFramebuffer = dfbSurface; // default
+// more globals :(
+static IDirectFBSurface  *boundMask;
+static IDirectFBSurface  *boundTexture;
+static IDirectFBSurface  *boundFramebuffer = NULL; // default
 
 void premultiply(float* d, const float* s)
 {
@@ -76,7 +76,7 @@ void premultiply(float* d, const float* s)
 class pxFBOTexture : public pxTexture
 {
 public:
-   pxFBOTexture() : mOffscreen(), mWidth(0), mHeight(0), mTexture(NULL)
+   pxFBOTexture() : mWidth(0), mHeight(0), mOffscreen(), mTexture(NULL)
    {
       mTextureType = PX_TEXTURE_FRAME_BUFFER;
    }
@@ -87,7 +87,7 @@ public:
    {
       rtLogDebug("############# this: %p >>  %s  WxH: %d x %d \n", this, __PRETTY_FUNCTION__, w,h);
 
-      if (mTexture)
+      if (mTexture !=NULL)
       {
          deleteTexture();
       }
@@ -118,7 +118,7 @@ public:
    {
       rtLogDebug("############# this: %p >>  %s  WxH: %d, %d\n", this, __PRETTY_FUNCTION__, width, height);
 
-      if (mWidth != width || mHeight != height || !mTexture )
+      if (mWidth != width || mHeight != height || !mTexture)
       {
          createTexture(width, height);
          return PX_OK;
@@ -165,9 +165,10 @@ public:
    {
 	  //glBindFramebuffer(GL_FRAMEBUFFER, mFramebufferId);
 
-      rtLogDebug("############# this: (virtual) >>  %s  ENTER\n", __PRETTY_FUNCTION__);
+      boundFramebuffer = mTexture;
+    //  boundTexture     = mTexture;
 
-	  boundFramebuffer = mTexture;
+      rtLogDebug("############# this: (virtual) >>  %s  ENTER\n", __PRETTY_FUNCTION__);
 
       gResW = mWidth;
       gResH = mHeight;
@@ -219,25 +220,26 @@ public:
    virtual int width()   { return mWidth;  }
    virtual int height()  { return mHeight; }
 
-   void setWidth(int w)  { dsc.width  = mWidth  = w; }
-   void setHeight(int h) { dsc.height = mHeight = h; }
+//   void setWidth(int w)  { dsc.width  = mWidth  = w; }
+//   void setHeight(int h) { dsc.height = mHeight = h; }
 
-   void                    setSurface(IDirectFBSurface* s)     { mTexture  = s; };
+//   void                    setSurface(IDirectFBSurface* s)     { mTexture  = s; };
 
-   IDirectFBSurface*       getSurface()     { return mTexture; };
-   DFBVertex*              getVetricies()   { return &v[0];   };
-   DFBSurfaceDescription   getDescription() { return dsc;     };
+//   IDirectFBSurface*       getSurface()     { return mTexture; };
+//   DFBVertex*              getVetricies()   { return &v[0];   };
+//   DFBSurfaceDescription   getDescription() { return dsc;     };
 
    DFBVertex v[4];  //quad
 
 
 private:
-   pxOffscreen             mOffscreen;
-
    int                     mWidth;
    int                     mHeight;
 
+   pxOffscreen             mOffscreen;
+
    IDirectFBSurface       *mTexture;
+
    DFBSurfaceDescription   dsc;
 
 private:
@@ -286,7 +288,6 @@ private:
 
       return PX_OK;
    }
-
 };// CLASS - pxFBOTexture
 
 //====================================================================================================================================================================================
@@ -378,20 +379,25 @@ public:
          return PX_NOTINITIALIZED;
       }
 
-      // TODO would be nice to do the upload in createTexture but right now it's getting called on wrong thread
-//      if (!mTextureUploaded)
-//      {
-//         createSurface(mOffscreen); // JUNK
-//         mTextureUploaded = true;
-//      }
-
       if (!mTexture)
       {
          rtLogDebug("############# this: %p >>  %s  ENTER\n", this,__PRETTY_FUNCTION__);
          return PX_NOTINITIALIZED;
       }
 
-      boundTexture = mTexture;
+      // TODO would be nice to do the upload in createTexture but right now it's getting called on wrong thread
+      if (!mTextureUploaded)
+      {
+         createSurface(mOffscreen); // JUNK
+
+         boundTexture = mTexture;
+
+         mTextureUploaded = true;
+      }
+	  else
+      {
+          boundTexture = mTexture;
+      }
 
       return PX_OK;
    }
@@ -411,7 +417,18 @@ public:
          return PX_NOTINITIALIZED;
       }
 
-      boundMask = mTexture;
+      if (!mTextureUploaded)
+      {
+         createSurface(mOffscreen); // JUNK
+
+         boundMask = mTexture;
+
+         mTextureUploaded = true;
+      }
+      else
+      {
+         boundMask = mTexture;
+      }
 
       return PX_OK;
    }
@@ -529,7 +546,7 @@ public:
 #endif
 
       // TODO Moved this to bindTexture because of more pain from JS thread calls
-      createTexture(w, h, iw, ih);
+//      createTexture(w, h, iw, ih);
 
 //      //JUNK
 //       if(mTexture)
@@ -679,6 +696,12 @@ private:
 
 static void drawRect2(float x, float y, float w, float h, const float* c)
 {
+   if( boundFramebuffer == 0)
+   {
+      rtLogError("cannot drawRect2() on context surface because surface is NULL");
+      return;
+   }
+
    const float verts[4][2] =
    {
       {  x,   y },
@@ -692,17 +715,17 @@ static void drawRect2(float x, float y, float w, float h, const float* c)
    float colorPM[4];
    premultiply(colorPM,c);
 
-   DFB_CHECK( boundTexture->SetColor( boundTexture, colorPM[0] * 255.0, // RGBA
+   DFB_CHECK( boundFramebuffer->SetColor( boundFramebuffer, colorPM[0] * 255.0, // RGBA
                                                     colorPM[1] * 255.0,
                                                     colorPM[2] * 255.0,
                                                     colorPM[3] * 255.0));
 
-   DFB_CHECK( boundTexture->FillRectangle( boundTexture, x, y, w, h));
+   DFB_CHECK( boundFramebuffer->FillRectangle( boundFramebuffer, x, y, w, h));
 }
 
 static void drawRectOutline(float x, float y, float w, float h, float lw, const float* c)
 {
-   if(boundTexture == 0)
+   if( boundFramebuffer == 0)
    {
       rtLogError("cannot drawRectOutline() on context surface because surface is NULL");
       return;
@@ -711,7 +734,7 @@ static void drawRectOutline(float x, float y, float w, float h, float lw, const 
    float colorPM[4];
    premultiply(colorPM, c);
 
-   DFB_CHECK( boundTexture->SetColor( boundTexture, colorPM[0] * 255.0, // RGBA
+   DFB_CHECK( boundFramebuffer->SetColor(  boundFramebuffer, colorPM[0] * 255.0, // RGBA
                                                     colorPM[1] * 255.0,
                                                     colorPM[2] * 255.0,
                                                     colorPM[3] * 255.0));
@@ -722,10 +745,10 @@ static void drawRectOutline(float x, float y, float w, float h, float lw, const 
 
    float half = lw/2;
 
-   DFB_CHECK( boundTexture->FillRectangle( boundTexture, x-half,     y-half,     lw + w, lw    ) ); // TOP
-   DFB_CHECK( boundTexture->FillRectangle( boundTexture, x-half,     y-half + h, lw + w, lw    ) ); // BOTTOM
-   DFB_CHECK( boundTexture->FillRectangle( boundTexture, x-half,     y-half,     lw,     lw + h) ); // LEFT
-   DFB_CHECK( boundTexture->FillRectangle( boundTexture, x-half + w, y-half,     lw,     lw + h) ); // RIGHT
+   DFB_CHECK(  boundFramebuffer->FillRectangle(  boundFramebuffer, x-half,     y-half,     lw + w, lw    ) ); // TOP
+   DFB_CHECK(  boundFramebuffer->FillRectangle(  boundFramebuffer, x-half,     y-half + h, lw + w, lw    ) ); // BOTTOM
+   DFB_CHECK(  boundFramebuffer->FillRectangle(  boundFramebuffer, x-half,     y-half,     lw,     lw + h) ); // LEFT
+   DFB_CHECK(  boundFramebuffer->FillRectangle(  boundFramebuffer, x-half + w, y-half,     lw,     lw + h) ); // RIGHT
 
    needsFlip = true;
 }
@@ -737,14 +760,6 @@ static void drawImageTexture(float x, float y, float w, float h, pxTextureRef te
    {
       rtLogError("ERROR: drawImageTexture() >>> texture: NULL   BAD !");
       return;
-   }
-
-   if (boundFramebuffer == NULL)
-   {
-      rtLogError("ERROR: drawImageTexture() >>> boundFrame: NULL   BAD !");
-
-      boundFramebuffer = dfbSurface;
-     // return;
    }
 
    float iw = texture->width();
@@ -796,9 +811,12 @@ static void drawImageTexture(float x, float y, float w, float h, pxTextureRef te
      { tw, secondTextureY }
    };
 
-#warning MOVE "Binding" to texture type drawing ... ?
+   (void) uv; // WARNING
 
-// Is it HERE ?
+   float colorPM[4];
+   premultiply(colorPM, color);
+
+#warning MOVE "Binding" to texture type drawing ... ?
 
    texture->bindGLTexture(0);
 
@@ -808,12 +826,6 @@ static void drawImageTexture(float x, float y, float w, float h, pxTextureRef te
                  __PRETTY_FUNCTION__, texture.getPtr(), texture->width(), texture->height());
       mask->bindGLTextureAsMask(0);
    }
-
-   (void) uv; // WARNING
-
-   float colorPM[4];
-   premultiply(colorPM, color);
-
 
    if (mask.getPtr() == NULL && texture->getType() != PX_TEXTURE_ALPHA)
    {
@@ -838,13 +850,12 @@ static void drawImageTexture(float x, float y, float w, float h, pxTextureRef te
 
    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  // if (!boundFramebuffer)
-  // {
-  //    rtLogError("ERROR:  the boundFramebuffer surface is NULL !");
-  //
-  //    boundFramebuffer = dfbSurface; // default
-  //    //return;
-  // }
+   if (!boundFramebuffer)
+   {
+      rtLogError("ERROR:  the boundFramebuffer surface is NULL !");
+
+      boundFramebuffer = dfbSurface; // default
+   }
 
    if (!currentFramebuffer)
    {
@@ -951,76 +962,46 @@ static void drawImage92(float x, float y, float w, float h,
    float ih = texture->height();
 
    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-   // UPPER ROW
+   // TOP ROW
    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-   srcUL.x = 0;                   srcUM.x = x1;                    srcUR.x = x2;
-   srcUL.y = 0;                   srcUM.y = 0;                     srcUR.y = 0;
-   srcUL.w = x1;                  srcUM.w = (x2 - x1);             srcUR.w = iw - x2;
-   srcUL.h = y1;                  srcUM.h = y1;                    srcUR.h = y1;
+   srcUL.w = x1;                    srcUM.w = (x2 - x1);             srcUR.w = iw - x2;
+   srcUL.h = y1;                    srcUM.h = y1;                    srcUR.h = y1;
+   srcUL.x = 0;                     srcUM.x = x1;                    srcUR.x = x2;
+   srcUL.y = 0;                     srcUM.y = 0;                     srcUR.y = 0;
 
-   dstUL.x = x;
-   dstUL.y = y;
-   dstUL.w = x1;
-   dstUL.h = y1;
-
-   dstUM.x = dstUL.x + dstUL.w;
-   dstUM.y = dstUL.y;
-   dstUM.w = w - (iw - x2) - x1;
-   dstUM.h = y1;
-
-   dstUR.x = dstUM.x + dstUM.w;
-   dstUR.y = dstUL.y;
-   dstUR.w = (iw - x2);
-   dstUR.h = y1;
+   dstUL.w = x1;                    dstUM.w = w - (iw - x2) - x1;    dstUR.w = (iw - x2);
+   dstUL.h = y1;                    dstUM.h = y1;                    dstUR.h = y1;
+   dstUL.x = x;                     dstUM.x = dstUL.x + dstUL.w;     dstUR.x = dstUM.x + dstUM.w;
+   dstUL.y = y;                     dstUM.y = dstUL.y;               dstUR.y = dstUL.y;
 
    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
    // MIDDLE ROW
    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-   srcML.x = 0;                   srcMM.x = x1;                   srcMR.x = x2;
-   srcML.y = y1;                  srcMM.y = y1 ;                  srcMR.y = y1;
-   srcML.w = x1;                  srcMM.w = (x2 - x1);            srcMR.w = (iw - x2);
-   srcML.h = (y2 - y1);           srcMM.h = (y2 - y1);            srcMR.h = (y2 - y1);
+   srcML.w = x1;                    srcMM.w = (x2 - x1);            srcMR.w = (iw - x2);
+   srcML.h = (y2 - y1);             srcMM.h = (y2 - y1);            srcMR.h = (y2 - y1);
+   srcML.x = 0;                     srcMM.x = x1;                   srcMR.x = x2;
+   srcML.y = y1;                    srcMM.y = y1 ;                  srcMR.y = y1;
 
-   dstML.x = dstUL.x;
-   dstML.y = dstUL.y + dstUL.h;
-   dstML.w = dstUL.w;
-   dstML.h = h - (ih - y2) - y1;  // ##
-
-   dstMM.x = dstUM.x;
-   dstMM.y = dstUM.y + dstUM.h;
-   dstMM.w = dstUM.w;
-   dstMM.h = dstML.h;
-
-   dstMR.x = dstUR.x;
-   dstMR.y = dstUR.y + dstUR.h;
-   dstMR.w = dstUR.w;
-   dstMR.h = dstML.h;
+   dstML.w = dstUL.w;               dstMM.w = dstUM.w;              dstMR.w = dstUR.w;
+   dstML.h = h - (ih - y2) - y1;    dstMM.h = dstML.h;              dstMR.h = dstML.h;
+   dstML.x = dstUL.x;               dstMM.x = dstUM.x;              dstMR.x = dstUR.x;
+   dstML.y = dstUL.y + dstUL.h;     dstMM.y = dstUM.y + dstUM.h;    dstMR.y = dstUR.y + dstUR.h;
 
    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
    // BOTTOM ROW
    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-   srcBL.x = 0;                   srcBM.x = x1;                   srcBR.x = x2;
-   srcBL.y = y2;                  srcBM.y = y2;                   srcBR.y = y2;
-   srcBL.w = x1;                  srcBM.w = (x2 - x1);            srcBR.w = (iw - x2);
-   srcBL.h = (ih - y2);           srcBM.h = (ih - y2);            srcBR.h = (ih - y2);
+   srcBL.w = x1;                    srcBM.w = (x2 - x1);            srcBR.w = (iw - x2);
+   srcBL.h = (ih - y2);             srcBM.h = (ih - y2);            srcBR.h = (ih - y2);
+   srcBL.x = 0;                     srcBM.x = x1;                   srcBR.x = x2;
+   srcBL.y = y2;                    srcBM.y = y2;                   srcBR.y = y2;
 
-   dstBL.x = dstUL.x;
-   dstBL.y = dstML.y + dstML.h;
-   dstBL.w = dstUL.w;
-   dstBL.h = (ih - y2);   // ##
-
-   dstBM.x = dstMM.x;
-   dstBM.y = dstMM.y + dstMM.h;
-   dstBM.w = dstMM.w;
-   dstBM.h = dstBL.h;
-
-   dstBR.x = dstMR.x;
-   dstBR.y = dstMR.y + dstMR.h;
-   dstBR.w = dstMR.w;
-   dstBR.h = dstBL.h;
+   dstBL.w = dstUL.w;               dstBM.w = dstMM.w;              dstBR.w = dstMR.w;
+   dstBL.h = (ih - y2);             dstBM.h = dstBL.h;              dstBR.h = dstBL.h;
+   dstBL.x = dstUL.x;               dstBM.x = dstMM.x;              dstBR.x = dstMR.x;
+   dstBL.y = dstML.y + dstML.h;     dstBM.y = dstMM.y + dstMM.h;    dstBR.y = dstMR.y + dstMR.h;
 
    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -1029,7 +1010,6 @@ static void drawImage92(float x, float y, float w, float h,
       rtLogError("ERROR: drawImage92() >>> boundFrame: NULL   BAD !");
 
       boundFramebuffer = dfbSurface;
-     // return;
    }
 
    texture->bindGLTexture(0);
@@ -1165,8 +1145,7 @@ pxError pxContext::setFramebuffer(pxContextFramebufferRef fbo)
 
       // TODO probably need to save off the original FBO handle rather than assuming zero
 
-boundFramebuffer = dfbSurface;//default
-
+      boundFramebuffer   = dfbSurface;//default
       currentFramebuffer = defaultFramebuffer;
 
       pxContextState contextState;
@@ -1260,7 +1239,7 @@ void pxContext::drawDiagRect(float x, float y, float w, float h, float* color)
 
    if (!mShowOutlines) return;
 
-   if(boundTexture == NULL)
+   if(boundFramebuffer == NULL)
    {
       rtLogError("cannot drawDiagRect() on context surface because boundTexture is NULL");
       return;
@@ -1272,24 +1251,32 @@ void pxContext::drawDiagRect(float x, float y, float w, float h, float* color)
       return;
    }
 
-  const float verts[4][2] =
-  {
-    {  x,   y   },
-    {  x+w, y   },
-    {  x+w, y+h },
-    {  x,   y+h },
+   if (!boundFramebuffer)
+   {
+      rtLogError("ERROR:  the boundFramebuffer surface is NULL !");
+
+      boundFramebuffer = dfbSurface; // default
+   }
+
+   const float verts[4][2] =
+   {
+      {  x,   y   },
+      {  x+w, y   },
+      {  x+w, y+h },
+      {  x,   y+h },
    };
+
    (void) verts; // warning
 
    float colorPM[4];
    premultiply(colorPM, color);
 
-   DFB_CHECK (boundTexture->SetColor(boundTexture, colorPM[0] * 255.0, // RGBA
+   DFB_CHECK (boundFramebuffer->SetColor(boundFramebuffer, colorPM[0] * 255.0, // RGBA
                                                    colorPM[1] * 255.0,
                                                    colorPM[2] * 255.0,
                                                    colorPM[3] * 255.0));
 
-   DFB_CHECK (boundTexture->DrawRectangle(boundTexture, x, y, w, h));
+   DFB_CHECK (boundFramebuffer->DrawRectangle(boundFramebuffer, x, y, w, h));
 }
 
 void pxContext::drawDiagLine(float x1, float y1, float x2, float y2, float* color)
@@ -1306,6 +1293,13 @@ void pxContext::drawDiagLine(float x1, float y1, float x2, float y2, float* colo
       return;
    }
 
+   if (!boundFramebuffer)
+   {
+      rtLogError("ERROR:  the boundFramebuffer surface is NULL !");
+
+      boundFramebuffer = dfbSurface; // default
+   }
+
   const float verts[4][2] =
   {
     { x1, y1 },
@@ -1316,12 +1310,12 @@ void pxContext::drawDiagLine(float x1, float y1, float x2, float y2, float* colo
    float colorPM[4];
    premultiply(colorPM,color);
 
-   DFB_CHECK (boundTexture->SetColor(boundTexture, colorPM[0] * 255.0, // RGBA
+   DFB_CHECK (boundFramebuffer->SetColor(boundTexture, colorPM[0] * 255.0, // RGBA
                                                    colorPM[1] * 255.0,
                                                    colorPM[2] * 255.0,
                                                    colorPM[3] * 255.0));
 
-   DFB_CHECK (boundTexture->DrawLine(boundTexture, x1,y1, x2,y2));
+   DFB_CHECK (boundFramebuffer->DrawLine(boundFramebuffer, x1,y1, x2,y2));
 }
 
 pxTextureRef pxContext::createTexture(pxOffscreen& o)

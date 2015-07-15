@@ -13,9 +13,9 @@
 
 pxScene2dRef scene;
 
-//#define USE_RECTANGLE
+#define USE_RECTANGLE
 
-//#define USE_BG
+#define USE_BG
 //#define USE_BG_RADIAL
 //#define USE_TEXT
 //#define USE_PICTURE
@@ -517,15 +517,19 @@ pxViewRef testScene()
   imgURL = d;
   imgURL.append("/../images/curve_rectangle.png");
   image9.set("url", imgURL);
-  image9.set("x", 100);
+  image9.set("x", 450);
   image9.set("y", 100);
   image9.set("x1", 65);
   image9.set("y1", 65);
   image9.set("x2",190);
   image9.set("y2",190);
-  image9.set("w", 1200);
-  image9.set("h", 300);
+  image9.set("w", 170);
+  image9.set("h", 170);
+//  image9.set("w", 1080);
+//  image9.set("h", 300);
   image9.set("parent", root);
+
+//  var slice9 = scene.createImage9({url:slice9url, x:450, y:100, x1:65, y1:65, x2:190, y1:190, w:170, h:170, parent:root});
 
 #endif // USE_RECTANGLE
 

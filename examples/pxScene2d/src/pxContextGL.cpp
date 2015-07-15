@@ -126,15 +126,15 @@ public:
 
   ~pxFBOTexture() { deleteTexture(); }
 
-  void createTexture(int w, int h)
+  void createTexture(int width, int height)
   {
     if (mFramebufferId != 0 && mTextureId != 0)
     {
       deleteTexture();
     }
     
-    mWidth  = w;
-    mHeight = h;
+    mWidth  = width;
+    mHeight = height;
 
     glGenFramebuffers(1, &mFramebufferId);
     glGenTextures(1, &mTextureId);
@@ -356,7 +356,9 @@ public:
       mTextureUploaded = true;
     }
     else
-      glBindTexture(GL_TEXTURE_2D, mTextureName);    
+    {
+      glBindTexture(GL_TEXTURE_2D, mTextureName);
+    }
 
     glUniform1i(tLoc, 1);
     return PX_OK;
