@@ -937,7 +937,7 @@ static void drawImageTexture(float x, float y, float w, float h, pxTextureRef te
 
    if(xStretch == PX_REPEAT || yStretch == PX_REPEAT)
    {
-      DFB_CHECK(boundFramebuffer->TileBlit(boundFramebuffer, boundTexture,  /*&rcSrc*/ NULL, x , y));
+      DFB_CHECK(boundFramebuffer->TileBlit(boundFramebuffer, boundTexture,  &rcSrc, x , y));
    }
    else
    if(xStretch == PX_STRETCH || yStretch == PX_STRETCH)
@@ -1032,20 +1032,11 @@ static void drawImage92(float x, float y, float w, float h,
 
    texture->bindGLTexture(0);
 
-   // UPPER ROW
-   DFB_CHECK(boundFramebuffer->StretchBlit(boundFramebuffer, boundTexture, &srcUL, &dstUL));
-   DFB_CHECK(boundFramebuffer->StretchBlit(boundFramebuffer, boundTexture, &srcUM, &dstUM));
-   DFB_CHECK(boundFramebuffer->StretchBlit(boundFramebuffer, boundTexture, &srcUR, &dstUR));
+   // UPPER ROW              MIDDLE ROW            BOTTOM ROW
+   const DFBRectangle src[9] = {srcUL, srcUM, srcUR,    srcML, srcMM, srcMR,    srcBL, srcBM, srcBR };
+   const DFBRectangle dst[9] = {dstUL, dstUM, dstUR,    dstML, dstMM, dstMR,    dstBL, dstBM, dstBR };
 
-   // MIDDLE ROW
-   DFB_CHECK(boundFramebuffer->StretchBlit(boundFramebuffer, boundTexture, &srcML, &dstML));
-   DFB_CHECK(boundFramebuffer->StretchBlit(boundFramebuffer, boundTexture, &srcMM, &dstMM));
-   DFB_CHECK(boundFramebuffer->StretchBlit(boundFramebuffer, boundTexture, &srcMR, &dstMR));
-
-   // BOTTOM ROW
-   DFB_CHECK(boundFramebuffer->StretchBlit(boundFramebuffer, boundTexture, &srcBL, &dstBL));
-   DFB_CHECK(boundFramebuffer->StretchBlit(boundFramebuffer, boundTexture, &srcBM, &dstBM));
-   DFB_CHECK(boundFramebuffer->StretchBlit(boundFramebuffer, boundTexture, &srcBR, &dstBR));
+   DFB_CHECK(boundFramebuffer->BatchStretchBlit(boundFramebuffer, boundTexture, &src[0], &dst[0], 9));
 }
 
 bool gContextInit = false;
