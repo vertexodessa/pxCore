@@ -10,7 +10,7 @@ function testScene()
 {
   var root = scene.root;
 
-  var n = 1;
+  var n  = 10;
   var nx = 100;
   var ny = 100;
 
