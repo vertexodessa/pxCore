@@ -16,12 +16,12 @@ function testScene()
     var url2 = process.cwd() + "/../../images/ball3.png"
     var bg2 = scene.createImage({id:"bg2",url:url2,xStretch:1,yStretch:1,parent:root,x:150,y:100});
 
-    var frame = scene.createRectangle({fillColor:0x00FF00ff,lineColor:0xFF0000ff,lineWidth:10, x:100, y:50, w:50, h:100, parent:root});
-    var rectangle = scene.createRectangle({fillColor:0xFF0000ff,x:10, y:150, w:50, h:200, parent:root});
+//    var frame = scene.createRectangle({fillColor:0x00FF00ff,lineColor:0xFF0000ff,lineWidth:10, x:100, y:50, w:50, h:100, parent:root});
+//    var rectangle = scene.createRectangle({fillColor:0xFF0000ff,x:10, y:150, w:50, h:200, parent:root});
 
-    var slice9url = process.cwd() + "/../../images/curve_rectangle.png"
+//    var slice9url = process.cwd() + "/../../images/curve_rectangle.png"
 //    var slice9 = scene.createImage9({url:slice9url, x:450, y:100, x1:65, y1:65, x2:190, y1:190, w:350, h:150, parent:root});
-    var slice9 = scene.createImage9({url:slice9url, x:450, y:100, x1:65, y1:65, x2:190, y1:190, w:170, h:170, parent:root});
+//    var slice9 = scene.createImage9({url:slice9url, x:450, y:100, x1:65, y1:65, x2:190, y1:190, w:170, h:170, parent:root});
 
 }
 

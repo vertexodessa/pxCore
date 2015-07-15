@@ -29,6 +29,22 @@ extern bool needsFlip;
 extern char* p2str(DFBSurfacePixelFormat fmt); // DEBUG
 
 
+#if 0
+// Use div0 to trigger debugger to break...
+
+#define DFB_CHECK(x...)              \
+{                                    \
+   DFBResult err = x;                \
+                                     \
+   if (err != DFB_OK)                \
+   {                                 \
+      rtLogError( " DFB died... " ); \
+      int n = 0;  int m = 2/n;\
+         DirectFBErrorFatal( #x, err ); \
+   }                                 \
+}
+#else
+
 #define DFB_CHECK(x...)              \
 {                                    \
    DFBResult err = x;                \
@@ -40,6 +56,8 @@ extern char* p2str(DFBSurfacePixelFormat fmt); // DEBUG
    }                                 \
 }
 
+
+#endif
 //====================================================================================================================================================================================
 
 //#warning TODO:  Use  pxContextSurfaceNativeDesc  within   pxFBOTexture ??
@@ -867,8 +885,8 @@ static void drawImageTexture(float x, float y, float w, float h, pxTextureRef te
 
    rcSrc.x = 0;
    rcSrc.y = 0;
-   rcSrc.w = currentFramebuffer->width();
-   rcSrc.h = currentFramebuffer->height();
+   rcSrc.w = iw;//currentFramebuffer->width();
+   rcSrc.h = ih;//currentFramebuffer->height();
 
    DFBRectangle rcDst;
 

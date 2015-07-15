@@ -16,7 +16,7 @@ pxScene2dRef scene;
 #define USE_RECTANGLE
 
 #define USE_BG
-//#define USE_BG_RADIAL
+#define USE_BG_RADIAL
 //#define USE_TEXT
 //#define USE_PICTURE
 //#define USE_RECTANGLE
