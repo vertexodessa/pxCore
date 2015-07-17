@@ -126,22 +126,22 @@ public:
 
   ~pxFBOTexture() { deleteTexture(); }
 
-  void createTexture(int width, int height)
+  void createTexture(int w, int h)
   {
     if (mFramebufferId != 0 && mTextureId != 0)
     {
       deleteTexture();
     }
     
-    mWidth  = width;
-    mHeight = height;
+    mWidth  = w;
+    mHeight = h;
 
     glGenFramebuffers(1, &mFramebufferId);
     glGenTextures(1, &mTextureId);
 
     glBindTexture(GL_TEXTURE_2D, mTextureId);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 
-                 width, height, 0, GL_RGBA,
+                 w, h, 0, GL_RGBA,
                  GL_UNSIGNED_BYTE, NULL);
     
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, PX_TEXTURE_MIN_FILTER);
@@ -150,12 +150,12 @@ public:
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
   }
   
-  pxError resizeTexture(int width, int height)
+  pxError resizeTexture(int w, int h)
   { 
-    if (mWidth != width || mHeight != height || 
+    if (mWidth != w || mHeight != h || 
         mFramebufferId == 0 || mTextureId == 0)
     {
-      createTexture(width, height);
+      createTexture(w, h);
       return PX_OK;
     }
 
@@ -167,13 +167,14 @@ public:
     glBindTexture(GL_TEXTURE_2D, mTextureId);
 
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 
-                 width, height, GL_RGBA,
+                 w, h, GL_RGBA,
                  GL_UNSIGNED_BYTE, NULL);
     
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, PX_TEXTURE_MIN_FILTER);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, PX_TEXTURE_MAG_FILTER);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
     return PX_OK;
   }
   
@@ -985,6 +986,7 @@ static void drawImageTexture(float x, float y, float w, float h, pxTextureRef te
 {
   if (texture.getPtr() == NULL)
   {
+    rtLogError("ERROR: drawImageTexture() >>> texture: NULL   BAD !");
     return;
   }
 
@@ -1061,7 +1063,9 @@ static void drawImage92(GLfloat x, GLfloat y, GLfloat w, GLfloat h,
                         GLfloat x1, GLfloat y1, GLfloat x2, GLfloat y2, pxTextureRef texture)
 {
   if (texture.getPtr() == NULL)
-    return;
+  {
+     return;
+  }
 
   float ox1 = x;
   float ix1 = x+x1;
@@ -1233,26 +1237,26 @@ float pxContext::getAlpha()
   return gAlpha;
 }
 
-pxContextFramebufferRef pxContext::createFramebuffer(int width, int height)
+pxContextFramebufferRef pxContext::createFramebuffer(int w, int h)
 {
   pxContextFramebuffer *fbo     = new pxContextFramebuffer();
   pxFBOTexture         *texture = new pxFBOTexture();
 
-  texture->createTexture(width, height);
+  texture->createTexture(w, h);
 
   fbo->setTexture(texture);
   
   return fbo;
 }
 
-pxError pxContext::updateFramebuffer(pxContextFramebufferRef fbo, int width, int height)
+pxError pxContext::updateFramebuffer(pxContextFramebufferRef fbo, int w, int h)
 {
   if (fbo.getPtr() == NULL || fbo->getTexture().getPtr() == NULL)
   {
     return PX_FAIL;
   }
   
-  return fbo->getTexture()->resizeTexture(width, height);
+  return fbo->getTexture()->resizeTexture(w, h);
 }
 
 pxContextFramebufferRef pxContext::getCurrentFramebuffer()

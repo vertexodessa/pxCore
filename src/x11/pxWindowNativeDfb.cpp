@@ -13,6 +13,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <signal.h>
+#include <time.h>
 
 #define DFB_PX_CORE_FPS 30
 
@@ -21,6 +22,8 @@
 //#define USE_DFB_LAYER
 
 #define USE_DRAW_THREAD
+//#define USE_DRAW_ALARM   /// BAD >> Results in " Direct/Thread: Started 'SigHandler' " error when run with Node
+
 
 IDirectFB              *dfb         = NULL;
 
@@ -102,7 +105,9 @@ void onTimer(uint32_t v);
 void onMouseMotion(int32_t x, int32_t y);
 void onMouse(uint32_t button, int32_t state, int32_t x, int32_t y);
 
-
+#ifdef USE_DFB_WINDOW
+static void reshape(int32_t width, int32_t height);
+#endif
 
 //#define EPRINTF(...) printf(__VA_ARGS__)
 #define EPRINTF(f_, ...)
@@ -198,7 +203,7 @@ ProcessInputEvent(DFBInputEvent *ievt)
         }
       }
 
-      printf("MOUSE >> (%d,%d)\n", cursor_x, cursor_y);
+      //printf("MOUSE >> (%d,%d)\n", cursor_x, cursor_y);
 
       onMouseMotion(cursor_x, cursor_y);
       break;
@@ -234,7 +239,7 @@ ProcessInputEvent(DFBInputEvent *ievt)
 
 
 //start dfb callbacks
-
+#ifdef USE_DFB_WINDOW
 static void reshape(int32_t width, int32_t height)
 {
   vector<pxWindowNative*> windowVector = pxWindow::getNativeWindows();
@@ -246,6 +251,7 @@ static void reshape(int32_t width, int32_t height)
     w->onSize(width, height);
   }
 }
+#endif
 
 void eventLoop()
 {
@@ -908,7 +914,7 @@ void pxWindowNative::exitEventLoop()
 {
   exitFlag = true;
 
-  DFB_CHECK (dfbBuffer->WakeUp(dfbBuffer)); // Unblock
+  DFB_CHECK (dfbBuffer->WakeUp(dfbBuffer)); // Unblock I/O
 
   printf("************************* %s\n",__PRETTY_FUNCTION__);// JUNK
 
@@ -1090,6 +1096,7 @@ char* p2str(DFBSurfacePixelFormat fmt)
 
 #ifdef USE_DRAW_THREAD
 
+#ifndef USE_DRAW_ALARM
 class Timer
 {
     timeval timer[2];
@@ -1125,39 +1132,105 @@ class Timer
 
 //#####
 
-void mysleep_ms(int32_t milisec)
+void mysleep_ms(int32_t ms)
 {
     struct timespec res;
 
-    res.tv_sec  = (milisec / 1000);
-    res.tv_nsec = (milisec * 1000000) % 1000000000;
+    res.tv_sec  = (ms / 1000);
+    res.tv_nsec = (ms * 1000000) % 1000000000;
 
     clock_nanosleep(CLOCK_MONOTONIC, 0, &res, NULL);
 }
 
 static Timer  timer;
 
-
 void *draw_func(void *ptr)
 {
-  float fps_rate = ptr ? *((int *) ptr) : 60.0;
-  float sleep_ms = (1.0/(float) fps_rate) * 1000.0;
+  double fps_rate = ptr ? *((int *) ptr) : 60.0;
+  double sleep_ms = (1.0/(float) fps_rate) * 1000.0;
 
   printf("\n\n\n SET fps = %f    %f ms\n\n\n", fps_rate, sleep_ms);
 
   while(!exitFlag)
   {
-    timer.start();
+     timer.start();
 
-    onTimer(0);
+     onTimer(0);
 
-    timer.stop();
+     timer.stop();
 
-  // schedule next timer event
-    mysleep_ms(sleep_ms - timer.duration_ms() );
-}
+     // schedule next timer event
+     mysleep_ms(sleep_ms - timer.duration_ms() );
+  }
 
   return NULL;
 }
+
+#else
+
+timer_t fpsTimer;
+
+void drawFrame(int signum)
+{
+    //fprintf(stderr, "Tick ###");
+    onTimer(0);
+}
+
+void setupFpsTimer(int fps)
+{
+   struct itimerspec new_value, old_value;
+   struct sigaction action;
+   struct sigevent sevent;
+   sigset_t set;
+//   int signum;
+
+   // SIGALRM for printing time
+   memset(&action, 0, sizeof(struct sigaction));
+   action.sa_handler = drawFrame;
+
+   if (sigaction(SIGALRM, &action, NULL) == -1)
+      perror ("sigaction");
+
+   // for program completion
+   memset (&sevent, 0, sizeof (struct sigevent));
+   sevent.sigev_notify = SIGEV_SIGNAL;
+   sevent.sigev_signo  = SIGRTMIN;
+
+   if (timer_create(CLOCK_MONOTONIC, NULL, &fpsTimer) == -1)
+      perror ("timer_create");
+
+   const float ns_per_second = 1.0e9f; // nanoseconds per seconds
+   float sleep_ns = (1.0f/(float) fps) * ns_per_second;
+
+   new_value.it_interval.tv_sec  = 0;
+   new_value.it_interval.tv_nsec = (long) sleep_ns; //###
+   new_value.it_value.tv_sec     = 0;
+   new_value.it_value.tv_nsec    = (long) sleep_ns; //###
+
+   if (timer_settime( fpsTimer, 0, &new_value, &old_value) == -1)
+      perror ("timer_settime");
+
+   if (sigemptyset (&set) == -1)
+      perror ("sigemptyset");
+
+   if (sigaddset (&set, SIGRTMIN) == -1)
+      perror ("sigaddset");
+
+   if (sigprocmask (SIG_BLOCK, &set, NULL) == -1)
+      perror ("sigprocmask");
+}
+
+void *draw_func(void *ptr)
+{
+  double fps_rate = ptr ? *((int *) ptr) : 60.0;
+  double sleep_ms = (1.0/(float) fps_rate) * 1000.0;
+
+  printf("\n\n\n SET fps = %f    %f ms\n\n\n", fps_rate, sleep_ms);
+
+  setupFpsTimer(fps_rate);
+
+  return NULL;
+}
+#endif //00
 
 #endif // USE_DRAW_THREAD

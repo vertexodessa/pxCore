@@ -13,14 +13,12 @@
 
 pxScene2dRef scene;
 
-#define USE_RECTANGLE
-
 #define USE_BG
 #define USE_BG_RADIAL
 //#define USE_TEXT
-//#define USE_PICTURE
+#define USE_PICTURE
 //#define USE_RECTANGLE
-#define USE_IMAGE9
+//#define USE_IMAGE9
 
 #if 0
 
@@ -517,7 +515,7 @@ pxViewRef testScene()
   imgURL = d;
   imgURL.append("/../images/curve_rectangle.png");
   image9.set("url", imgURL);
-  image9.set("x", 450);
+  image9.set("x", 350);
   image9.set("y", 100);
   image9.set("x1", 65);
   image9.set("y1", 65);
@@ -531,18 +529,25 @@ pxViewRef testScene()
 
 //  var slice9 = scene.createImage9({url:slice9url, x:450, y:100, x1:65, y1:65, x2:190, y1:190, w:170, h:170, parent:root});
 
+//  image9.send("animateTo", "h", 600, 0.5, 0, 0);
+//  image9.send("animateTo", "r", 360, 1.0, pxInterpLinear, PX_LOOP);
+//  image9.send("animateTo", "x", 360.0, 1.0, 0.0, 0.0);
+//  image9.send("animateTo", "x", 800, 2.0, pxInterpLinear, PX_SEESAW);
+//  image9.send("animateTo", "a", 0.5, 2.0, pxInterpLinear, PX_SEESAW);
 
   rtObjectRef& child = ctx->rectangle;
 
   scene.sendReturns<rtObjectRef>("createRectangle", child);
-  child.set("x", 5);
-  child.set("y", 5);
+  child.set("x", 20);
+  child.set("y", 20);
   child.set("w", 30);
   child.set("h", 30);
   child.set("fillColor", 0x0000FFFF);
 //  child.set("lineColor", 0x00FF00FF);
 //  child.set("lineWidth", 10);
   child.set("parent", image9);
+
+//child.send("animateTo", "r", 360, 1.0, 0, 0);
 
 #endif // USE_RECTANGLE
 

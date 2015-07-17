@@ -43,9 +43,11 @@ void pxImage::loadImage(rtString url)
   mTextureCacheObject.setURL(url);
 }
 
-void pxImage::draw() {
-  static pxTextureRef nullMaskRef;
-  context.drawImage(0, 0, mw, mh, mTexture, nullMaskRef, 
+void pxImage::draw()
+{
+   static const pxTextureRef nullMaskRef;
+
+   context.drawImage(0, 0, mw, mh, mTexture, nullMaskRef,
                     mXStretch, mYStretch);
 }
 

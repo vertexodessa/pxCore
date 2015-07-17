@@ -76,8 +76,10 @@ rtError pxObject::animateToP2(rtObjectRef props, double duration,
                               uint32_t interp, uint32_t animationType, 
                               rtObjectRef& promise)
 {
-
-  if (!props) return RT_FAIL;
+  if (!props)
+  {
+     return RT_FAIL;
+  }
 
   promise = new rtPromise;
 

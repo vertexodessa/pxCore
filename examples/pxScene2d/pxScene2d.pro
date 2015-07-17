@@ -110,16 +110,18 @@ unix {
     INCLUDEPATH += ./external/png
     INCLUDEPATH += /usr/local/include/directfb
 
-    LIBS += -ldl -fPIC -lm
+    LIBS += -ldl -fPIC
     LIBS += -L"./external/jpg/.libs" -ljpeg
     LIBS += -L"../pxCore/examples/pxScene2d/external/png/.libs" -lpng16
     LIBS += -L"./external/ft/objs/.libs" -lfreetype
     LIBS += -L"./external/curl/lib/.libs" -lcurl
 
-    LIBS += -L"/usr/local/lib" -ldirectfb -lpthread
+    LIBS += -L"/usr/local/lib" -ldirectfb
+    LIBS += -lz -lm -lpthread
+
  #   LIBS += -L"../../pxCore/build/x11" -lpxCore
 }
 
 message(" PWD >>>   " $$PWD)
 
-unix:!macx: LIBS += -L$$PWD/../../../build-pxSuite-Desktop-Debug -lpxCore
+unix:!macx: LIBS += -L$$PWD/../../../build-pxSuite-Desktop-Debug -lpxCore -lrt

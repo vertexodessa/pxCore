@@ -32,8 +32,8 @@ class pxContext {
   void pushState();
   void popState();
 
-  pxContextFramebufferRef createFramebuffer(int width, int height);
-  pxError updateFramebuffer(pxContextFramebufferRef fbo, int width, int height);
+  pxContextFramebufferRef createFramebuffer(int w, int h);
+  pxError updateFramebuffer(pxContextFramebufferRef fbo, int w, int h);
   pxError setFramebuffer(pxContextFramebufferRef fbo);
   pxContextFramebufferRef getCurrentFramebuffer();
 //  pxError deleteContextSurface(pxTextureRef texture);
