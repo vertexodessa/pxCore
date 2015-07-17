@@ -561,6 +561,23 @@ dfbDisplay* displayRef::getDisplay() const
   return mDisplay;
 }
 
+void displayRef::cleanupDfbDisplay()
+{
+  if (mDisplay != NULL)
+  {
+    delete mDisplay;
+  }
+  mDisplay = NULL;
+}
+
+pxWindowNative::~pxWindowNative()
+{
+  cleanupDfbWindow();
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 #ifdef USE_DFB_LAYER
 
 void pxWindowNative::createDfbWindow(int left, int top, int width, int height)
@@ -601,9 +618,9 @@ void pxWindowNative::createDfbWindow(int left, int top, int width, int height)
 
 #endif // USE_DFB_WINDOW
 
-#ifdef USE_DFB_LAYER
-//  dfbLayer->GetSurface(dfbLayer, &dfbSurface );
-#endif
+//#ifdef USE_DFB_LAYER
+  dfbLayer->GetSurface(dfbLayer, &dfbSurface );
+//#endif
 
   //DFB_CHECK( dfbSurface->Clear( dfbSurface, 0x00, 0x00, 0x00,  0x00 ) );
   DFB_CHECK( dfbSurface->Clear( dfbSurface, 0xFF, 0x00, 0x00,  0xff ) );  // JUNK >>>  RED SCREEN
@@ -660,23 +677,11 @@ pxError displayRef::createDfbDisplay()
   return PX_OK;
 }
 
-#else
 
-// SURFACE only...
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void displayRef::cleanupDfbDisplay()
-{
-  if (mDisplay != NULL)
-  {
-    delete mDisplay;
-  }
-  mDisplay = NULL;
-}
-
-pxWindowNative::~pxWindowNative()
-{
-  cleanupDfbWindow();
-}
+#else // SURFACE only...
 
 
 void pxWindowNative::createDfbWindow(int left, int top, int width, int height)
