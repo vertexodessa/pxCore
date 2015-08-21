@@ -1,6 +1,6 @@
 #!/bin/bash
 BASE_DIR=/Applications/Pxscene.app
-LOG_FILE=/var/tmp/pxscene/installer.out
+LOG_FILE=/var/tmp/pxscene/log/installer.log
 printf "post install\n" >> ${LOG_FILE} 2>&1
 #echo "PRE OUTPUT -----" >> ${LOG_FILE} 2>&1
 #echo "$KS_PREINSTALL_OUT" >> ${LOG_FILE} 2>&1

@@ -7,11 +7,17 @@ DEPLOY_PATH=deploy/examples/pxScene2d
 BIN_SOURCE_PATH=examples/pxScene2d
 SKIPBUILD=false
 NODMG=false
+AUTOUPDATE=false
+BUILDEDGE=false
 
 function usage() {
   printf "Build script for pxscene binaries.\n"
   printf "Usage:  $(basename ${0}) options...\n" 
   printf "Options:\n"
+  printf "  -e/--buildedge\n"
+  printf "      builds the pxscene edge version of the dmg (default is to build pxscene 'stable')\n"
+  printf "  -a/--autoupdate\n"
+  printf "      builds dmg with autoupdate feature enabled (default is to build with it disabled)\n"
   printf "  -s/--skipbuild\n"
   printf "      skips the compilation and building of binaries and only does packaging\n"
   printf "  -n/--nodmg\n"
@@ -42,6 +48,12 @@ parseOptions() {
         ;;
         -s|--skipbuild)
         SKIPBUILD=true
+        ;;
+        -a|--autoupdate)
+        AUTOUPDATE=true
+        ;;
+        -e|--buildedge)
+        BUILDEDGE=true
         ;;
         -n|--nodmg)
         NODMG=true
