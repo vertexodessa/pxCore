@@ -1,6 +1,7 @@
 #!/bin/bash
 ABS=`pwd`
 EXT_LIB_PATH=${ABS}/examples/pxScene2d/external
+APP_RESOURCES=deploy/MacOSX/Pxscene/Pxscene.app/Contents/Resources
 NODE_PATH=${EXT_LIB_PATH}/node
 LOG_PATH=/var/tmp/pxscene/logs
 DEPLOY_PATH=deploy/examples/pxScene2d
@@ -138,12 +139,13 @@ copyBinaries() {
   cp ${BIN_SOURCE_PATH}/src/jsbindings/*.ttf ${DEPLOY_PATH}/src/jsbindings/.
   cp ${BIN_SOURCE_PATH}/src/jsbindings/*.sh ${DEPLOY_PATH}/src/jsbindings/.
   cp ${BIN_SOURCE_PATH}/src/jsbindings/build/Debug/px.node ${DEPLOY_PATH}/src/jsbindings/build/Debug/.
-  mv -f deploy/examples deploy/MacOSX/Pxscene/Pxscene.app/Contents/Resources/.
+  mv -f deploy/examples ${APP_RESOURCES}/.
   printf "done.\n"
 }
 
 createDMG() {
   DMG_RES_DIR=deploy/MacOSX/dmgresources
+  APPICONDIR=deploy/MacOSX/dmgresources
   WINX=10	#opened DMG X position
   WINY=10	#opened DMG Y position
   WINW=470	#opened DMG width
@@ -153,7 +155,16 @@ createDMG() {
 
   VOLUME_NAME=pxscene	#mounted DMG name
   MOUNT_DIR="/Volumes/${VOLUME_NAME}"
-  VOLUME_ICON_FILE=${DMG_RES_DIR}/pxscenevolico.icns	#DMG volume icon
+  if [ "${BUILDEDGE}" = true ]; then
+    #use/set edge icon files
+    VOLUME_ICON_FILE=${DMG_RES_DIR}/pxsceneedgevolico.icns	#DMG volume icon
+    cp ${APPICONDIR}/pxsceneedge.icns ${APP_RESOURCES}/AppIcon.icns  #Appicon
+  else
+    #use/set stable icon files
+    VOLUME_ICON_FILE=${DMG_RES_DIR}/pxscenevolico.icns	#DMG volume icon
+    cp ${APPICONDIR}/pxscene.icns ${APP_RESOURCES}/AppIcon.icns
+  fi
+
   BACKGROUND_FILE=${DMG_RES_DIR}/background.png		#DMG background image
   BACKGROUND_FILE_NAME="$(basename ${BACKGROUND_FILE})"
   #applescript clauses to set icon positions within the dmg
