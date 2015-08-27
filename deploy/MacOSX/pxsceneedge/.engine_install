@@ -1,0 +1,23 @@
+#!/bin/bash
+BASE_DIR=`dirname $0`
+cd ${BASE_DIR}
+BASE_DIR=`pwd`
+LOG_DIR=/var/tmp/pxsceneedge/log
+LOG_FILE=${LOG_DIR}/installer.log
+PX=`ps -Al | grep load.sh | grep -v grep`
+test -d "${LOG_DIR}" || mkdir "${LOG_DIR}"
+while [ -n "${PX}" ]; do
+   TS=`date "+%Y-%m-%d %H:%M:%S"`
+   printf "${TS} > Found: ${PX}\n"
+   printf "${TS} > Update will not complete while pxsceneedge is running...sleeping for 60.\n" >> ${LOG_FILE} 2>&1
+   sleep 60
+   PX=`ps -Al | grep load.sh | grep -v grep`
+done
+#do install
+TS=`date "+%Y-%m-%d %H:%M:%S"`
+printf "${TS} > Installing new version...\n" >> ${LOG_FILE} 2>&1
+TS=`date "+%Y-%m-%d %H:%M:%S"`
+printf "${TS} >  Copying $1/pxsceneedge.app to /Applications...\n" >> ${LOG_FILE} 2>&1
+cp -R "$1/pxsceneedge.app" /Applications/ >> ${LOG_FILE} 2>&1
+TS=`date "+%Y-%m-%d %H:%M:%S"`
+printf "${TS} > Install complete.\n" >> ${LOG_FILE} 2>&1
