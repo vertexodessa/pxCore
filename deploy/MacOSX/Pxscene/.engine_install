@@ -1,5 +1,5 @@
 #!/bin/bash
-BASE_DIR=/Applications/Pxscene.app
+BASE_DIR=/Applications/pxscene.app
 LOG_DIR=/var/tmp/pxscene/log
 LOG_FILE=${LOG_DIR}/installer.log
 PX=`ps -Al | grep load.sh | grep -v grep`
@@ -15,7 +15,7 @@ done
 TS=`date "+%Y-%m-%d %H:%M:%S"`
 printf "${TS} > Installing new version...\n" >> ${LOG_FILE} 2>&1
 TS=`date "+%Y-%m-%d %H:%M:%S"`
-printf "${TS} >  Copying $1/Pxscene.app to /Applications...\n" >> ${LOG_FILE} 2>&1
-cp -R "$1/Pxscene.app" /Applications/ >> ${LOG_FILE} 2>&1
+printf "${TS} >  Copying $1/pxscene.app to /Applications...\n" >> ${LOG_FILE} 2>&1
+cp -R "$1/pxscene.app" /Applications/ >> ${LOG_FILE} 2>&1
 TS=`date "+%Y-%m-%d %H:%M:%S"`
 printf "${TS} > Install complete.\n" >> ${LOG_FILE} 2>&1

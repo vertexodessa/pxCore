@@ -1,15 +1,22 @@
 #!/bin/bash
 ABS=`pwd`
 EXT_LIB_PATH=${ABS}/examples/pxScene2d/external
-APP_RESOURCES=deploy/MacOSX/Pxscene/Pxscene.app/Contents/Resources
 NODE_PATH=${EXT_LIB_PATH}/node
 LOG_PATH=/var/tmp/pxscene/logs
 DEPLOY_PATH=deploy/examples/pxScene2d
 BIN_SOURCE_PATH=examples/pxScene2d
 SKIPBUILD=false
 NODMG=false
-AUTOUPDATE=false
 BUILDEDGE=false
+
+APP_RESOURCES=deploy/MacOSX/pxscene/pxscene.app/Contents/Resources
+rm ${APP_RESOURCES}/../MacOS/autoupdate
+DMG_RES_DIR=deploy/MacOSX/dmgresources
+VOLUME_NAME=pxscene	#mounted DMG name
+VOLUME_ICON_FILE=${DMG_RES_DIR}/pxscenevolico.icns	#DMG volume icon
+DMG_FILE=deploy/MacOSX/pxscene.dmg
+APP=deploy/MacOSX/pxscene
+APP_NAME=pxscene
 
 function usage() {
   printf "Build script for pxscene binaries.\n"
@@ -32,8 +39,8 @@ function osCheck() {
   if [ `uname` != "Darwin" ]; then
     printf "Not MacOS\n"
   fi
-}
-
+} 
+ 
 parseOptions() {
   while [[ ${#} > 0 ]]
     do
@@ -41,26 +48,30 @@ parseOptions() {
 
       case ${key} in
         -h|--help)
-        usage
-        ;;
-        -e|--extension)
-        EXTENSION="${2}"
-        shift # past argument need shift for each arg the option takes
+          usage
         ;;
         -s|--skipbuild)
-        SKIPBUILD=true
+          SKIPBUILD=true
         ;;
         -a|--autoupdate)
-        AUTOUPDATE=true
+          touch deploy/MacOSX/pxscene/pxscene.app/Contents/MacOS/autoupate
+          touch deploy/MacOSX/pxsceneedge/pxsceneedge.app/Contents/MacOS/autoupate
         ;;
         -e|--buildedge)
-        BUILDEDGE=true
+          BUILDEDGE=true
+          APP_RESOURCES=deploy/MacOSX/pxsceneedge/pxsceneedge.app/Contents/Resources
+          rm ${APP_RESOURCES}/../MacOS/autoupdate
+          VOLUME_NAME=pxsceneedge	#mounted DMG name
+          VOLUME_ICON_FILE=${DMG_RES_DIR}/pxsceneedgevolico.icns	#DMG volume icon
+          DMG_FILE=deploy/MacOSX/pxsceneedge.dmg
+          APP=deploy/MacOSX/pxsceneedge
+          APP_NAME=pxsceneedge
         ;;
         -n|--nodmg)
-        NODMG=true
+          NODMG=true
         ;;
         --default)
-        DEFAULT=YES
+          DEFAULT=YES
         ;;
         *)
               # unknown option
@@ -126,26 +137,40 @@ buildExternalLibraries() {
 
 copyBinaries() {
   cd ${ABS}
+  CURL_LIB=external/curl-7.40.0/lib/.libs
+  FT_LIB=external/freetype-2.5.3/objs/.libs
+  JPG_LIB=external/jpeg-9a/.libs
+  PNG_LIB=external/libpng-1.6.12/.libs
   # copy required binaries
   printf "Creating directories for Binaries and examples..."
+  mkdir -p ${DEPLOY_PATH}/${CURL_LIB}
+  mkdir -p ${DEPLOY_PATH}/${JPG_LIB}
+  mkdir -p ${DEPLOY_PATH}/${PNG_LIB}
+  mkdir -p ${DEPLOY_PATH}/${FT_LIB}
   mkdir -p ${DEPLOY_PATH}/images
-  mkdir -p ${DEPLOY_PATH}/external
   mkdir -p ${DEPLOY_PATH}/src/jsbindings/build/Debug
   printf "done.\n"
   printf "Copying files to package directory..."
   cp -R ${BIN_SOURCE_PATH}/images/* ${DEPLOY_PATH}/images/.
-  cp -R ${BIN_SOURCE_PATH}/external/* ${DEPLOY_PATH}/external/.
+  cp -R ${BIN_SOURCE_PATH}/external/node* ${DEPLOY_PATH}/external/.
+  cp ${BIN_SOURCE_PATH}/${CURL_LIB}/*.dylib ${DEPLOY_PATH}/${CURL_LIB}/.
+  cp -R ${BIN_SOURCE_PATH}/external/curl ${DEPLOY_PATH}/external/curl
+  cp ${BIN_SOURCE_PATH}/${FT_LIB}/*.dylib ${DEPLOY_PATH}/${FT_LIB}/.
+  cp -R ${BIN_SOURCE_PATH}/external/ft ${DEPLOY_PATH}/external/.
+  cp ${BIN_SOURCE_PATH}/${JPG_LIB}/*.dylib ${DEPLOY_PATH}/${JPG_LIB}/.
+  cp -R ${BIN_SOURCE_PATH}/external/jpg ${DEPLOY_PATH}/external/.
+  cp ${BIN_SOURCE_PATH}/${PNG_LIB}/*.dylib ${DEPLOY_PATH}/${PNG_LIB}/.
+  cp -R ${BIN_SOURCE_PATH}/external/png ${DEPLOY_PATH}/external/.
   cp ${BIN_SOURCE_PATH}/src/jsbindings/*.js ${DEPLOY_PATH}/src/jsbindings/.
   cp ${BIN_SOURCE_PATH}/src/jsbindings/*.ttf ${DEPLOY_PATH}/src/jsbindings/.
-  cp ${BIN_SOURCE_PATH}/src/jsbindings/*.sh ${DEPLOY_PATH}/src/jsbindings/.
+  cp ${BIN_SOURCE_PATH}/src/jsbindings/load.sh ${DEPLOY_PATH}/src/jsbindings/.
   cp ${BIN_SOURCE_PATH}/src/jsbindings/build/Debug/px.node ${DEPLOY_PATH}/src/jsbindings/build/Debug/.
-  mv -f deploy/examples ${APP_RESOURCES}/.
+  rm -rf ${APP_RESOURCES}/examples
+  mv deploy/examples ${APP_RESOURCES}/.
   printf "done.\n"
 }
 
 createDMG() {
-  DMG_RES_DIR=deploy/MacOSX/dmgresources
-  APPICONDIR=deploy/MacOSX/dmgresources
   WINX=10	#opened DMG X position
   WINY=10	#opened DMG Y position
   WINW=470	#opened DMG width
@@ -153,32 +178,20 @@ createDMG() {
   ICON_SIZE=128	#DMG icon size
   TEXT_SIZE=16	#DMG text size
 
-  VOLUME_NAME=pxscene	#mounted DMG name
   MOUNT_DIR="/Volumes/${VOLUME_NAME}"
-  if [ "${BUILDEDGE}" = true ]; then
-    #use/set edge icon files
-    VOLUME_ICON_FILE=${DMG_RES_DIR}/pxsceneedgevolico.icns	#DMG volume icon
-    cp ${APPICONDIR}/pxsceneedge.icns ${APP_RESOURCES}/AppIcon.icns  #Appicon
-  else
-    #use/set stable icon files
-    VOLUME_ICON_FILE=${DMG_RES_DIR}/pxscenevolico.icns	#DMG volume icon
-    cp ${APPICONDIR}/pxscene.icns ${APP_RESOURCES}/AppIcon.icns
-  fi
-
   BACKGROUND_FILE=${DMG_RES_DIR}/background.png		#DMG background image
   BACKGROUND_FILE_NAME="$(basename ${BACKGROUND_FILE})"
   #applescript clauses to set icon positions within the dmg
   BACKGROUND_CLAUSE="set background picture of opts to file \".background:${BACKGROUND_FILE_NAME}\""
   REPOSITION_HIDDEN_FILES_CLAUSE="set position of every item to {theBottomRightX + 100, 100}"
-  POSITION_CLAUSE="${POSITION_CLAUSE}set position of item \"Pxscene.app\" to {240, 140}"
+  POSITION_CLAUSE="${POSITION_CLAUSE}set position of item \"${APP_NAME}.app\" to {240, 140}"
   APPLICATION_CLAUSE="set position of item \"Applications\" to {240, 390}"
 
-  DMG_FILE="deploy/MacOSX/pxscene.dmg"
   DMG_DIRNAME="$(dirname "${DMG_FILE}")"
   DMG_DIR="$(cd "${DMG_DIRNAME}" > /dev/null; pwd)"
   DMG_NAME="$(basename "${DMG_FILE}")"
   DMG_TEMP_NAME="${DMG_DIR}/rw.${DMG_NAME}"
-  SRC_FOLDER="$(cd "deploy/MacOSX/Pxscene" > /dev/null; pwd)"
+  SRC_FOLDER="$(cd "${APP}" > /dev/null; pwd)"
 
   printf "Creating DMG...\n"
   test -z "${VOLUME_NAME}" && VOLUME_NAME="$(basename "${DMG_FILE}" .dmg)"

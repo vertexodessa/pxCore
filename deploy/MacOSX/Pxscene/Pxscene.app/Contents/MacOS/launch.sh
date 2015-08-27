@@ -3,20 +3,22 @@ BASE_DIR=`dirname $0`
 cd ${BASE_DIR}
 BASE_DIR=`pwd`
 PX_VERSION=`cat ${BASE_DIR}/version`
+AUTO_UPDATE=${BASE_DIR}/autoupdate
 UPDATE_URL=http://www.pxscene.org/dist/osx/Info.plist
-PRODUCT_ID=com.comcast.Pxscene
+PRODUCT_ID=com.comcast.pxscene
 LOG_DIR=/var/tmp/pxscene/logs
 LOG_FILE=${LOG_DIR}/launch.out
 DEBUG_FILE=${LOG_DIR}/debug.out
 NODE_DIR=${BASE_DIR}/../Resources/examples/pxScene2d/external/node
+
+test -d "${LOG_DIR}" || mkdir "${LOG_DIR}"
 printf "Base directory is ${BASE_DIR}\n" > ${LOG_FILE} 2>&1
 printf "Node directory is ${NODE_DIR}\n" > ${LOG_FILE} 2>&1
 ER=`ps -Al | grep EngineRunner | grep -v grep`
 
-test -d "${LOG_DIR}" || mkdir "${LOG_DIR}"
 d=`date`
 printf "${d}: ${ER}\n" >> ${LOG_FILE} 2>&1
-if [ -z "${ER}" ]; then
+if [ -f "${AUTO_UPDATE}" ] && [ -z "${ER}" ]; then
    printf "Running EngineRunner (Auto update)\n"
    ${BASE_DIR}/EngineRunner run -productid ${PRODUCT_ID} -version ${PX_VERSION} -url ${UPDATE_URL} >> ${LOG_FILE} 2>&1 &
 fi

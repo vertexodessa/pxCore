@@ -9,13 +9,13 @@
 	<key>CFBundleExecutable</key>
 	<string>launch.sh</string>
 	<key>CFBundleIconFile</key>
-	<string>AppIcon</string>
+	<string>pxscene</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.comcast.Pxscene</string>
+	<string>com.comcast.pxscene</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Pxscene</string>
+	<string>pxscene</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
