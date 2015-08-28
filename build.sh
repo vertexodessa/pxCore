@@ -10,7 +10,7 @@ NODMG=false
 BUILDEDGE=false
 
 APP_RESOURCES=deploy/MacOSX/pxscene/pxscene.app/Contents/Resources
-rm ${APP_RESOURCES}/../MacOS/autoupdate
+test -f ${APP_RESOURCES}/../MacOS/autoupdate && rm -f ${APP_RESOURCES}/../MacOS/autoupdate
 DMG_RES_DIR=deploy/MacOSX/dmgresources
 VOLUME_NAME=pxscene	#mounted DMG name
 VOLUME_ICON_FILE=${DMG_RES_DIR}/pxscenevolico.icns	#DMG volume icon
@@ -60,7 +60,7 @@ parseOptions() {
         -e|--buildedge)
           BUILDEDGE=true
           APP_RESOURCES=deploy/MacOSX/pxsceneedge/pxsceneedge.app/Contents/Resources
-          rm ${APP_RESOURCES}/../MacOS/autoupdate
+          test -f ${APP_RESOURCES}/../MacOS/autoupdate && rm -f ${APP_RESOURCES}/../MacOS/autoupdate
           VOLUME_NAME=pxsceneedge	#mounted DMG name
           VOLUME_ICON_FILE=${DMG_RES_DIR}/pxsceneedgevolico.icns	#DMG volume icon
           DMG_FILE=deploy/MacOSX/pxsceneedge.dmg
@@ -161,7 +161,9 @@ copyBinaries() {
   cp -R ${BIN_SOURCE_PATH}/external/jpg ${DEPLOY_PATH}/external/.
   cp ${BIN_SOURCE_PATH}/${PNG_LIB}/*.dylib ${DEPLOY_PATH}/${PNG_LIB}/.
   cp -R ${BIN_SOURCE_PATH}/external/png ${DEPLOY_PATH}/external/.
-  cp ${BIN_SOURCE_PATH}/src/jsbindings/*.js ${DEPLOY_PATH}/src/jsbindings/.
+  cp ${BIN_SOURCE_PATH}/src/jsbindings/load.js ${DEPLOY_PATH}/src/jsbindings/.
+  cp ${BIN_SOURCE_PATH}/src/jsbindings/browser.js ${DEPLOY_PATH}/src/jsbindings/.
+  cp ${BIN_SOURCE_PATH}/src/jsbindings/about.js ${DEPLOY_PATH}/src/jsbindings/.
   cp ${BIN_SOURCE_PATH}/src/jsbindings/*.ttf ${DEPLOY_PATH}/src/jsbindings/.
   cp ${BIN_SOURCE_PATH}/src/jsbindings/load.sh ${DEPLOY_PATH}/src/jsbindings/.
   cp ${BIN_SOURCE_PATH}/src/jsbindings/build/Debug/px.node ${DEPLOY_PATH}/src/jsbindings/build/Debug/.

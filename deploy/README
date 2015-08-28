@@ -1,0 +1,13 @@
+This directory contains resources and artifacts for installable desktop applications that support the testing and develepment of pxscene.
+
+../build.sh - A build script that configures and compiles pxscene objects and packages into an installable application.
+   Supported platforms:
+       Mac OSX - configures and compiles shared libraries and packages into a DMG for installing on a Mac.  The DMG can support autoupdates so that the app updates to current stable build as they become available.  There is also an options to create and use pxsceneedge (the current, cutting edge build, prehaps nightly and may be a bit unstable)
+
+Autoupdate mechanism
+   The autoupdate mechanism consists of the following components:
+       * EngineRunner - The script that checks for and does the update
+       * .engine_preinstall - a hidden files at the root of the DMG that executes any preinstall actions needed for the App that is executed by the client update script (EngineRunner)
+       * .engine_install - a hidden file at the root of the DMG that executes the installation procedure needed to update the App that is executed by the client update script (EngineRunner)
+       * .engine_postinstall - a hidden file at the root of the DMG that executes any post installation procedure for the App that is executed by the client udate script (EngineRunner)
+      * Web server - for serving out and maintaining the "current" versions of the applications.
