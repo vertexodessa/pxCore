@@ -27,8 +27,10 @@ void pxEventLoop::exit()
 ///////////////////////////////////////////
 // Entry Point 
 
+#if 0
 int main(int argc, char* argv[])
 {
   pxMain();
   return 0;
 }
+#endif
