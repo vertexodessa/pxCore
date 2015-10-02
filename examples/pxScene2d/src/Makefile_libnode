@@ -41,7 +41,7 @@ PXLIBS=$(PXCOREDIR)/build/glut
 
 NODEINC=/home/hfitzpatrick/.node-gyp/0.12.0
 
-NODEDIR=./node
+NODEDIR=../external/libnode
 
 SEARCH=\
   -Ilinux \
