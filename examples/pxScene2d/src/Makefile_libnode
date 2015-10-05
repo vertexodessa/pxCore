@@ -6,33 +6,34 @@ clean:
 
 VPATH=linux
 
-RT_SRCS=\
-    rtError.cpp \
-    rtObject.cpp \
-    rtLog.cpp \
-    rtString.cpp \
-    rtValue.cpp \
-    rtFile.cpp \
-    rtThreadPool.cpp \
-    rtThreadTask.cpp \
-    rtLibrary.cpp \
-    utf8.c
+#RT_SRCS=\
+#    rtError.cpp \
+#    rtObject.cpp \
+#    rtLog.cpp \
+#    rtString.cpp \
+#    rtValue.cpp \
+#    rtFile.cpp \
+#    rtThreadPool.cpp \
+#    rtThreadTask.cpp \
+#    rtLibrary.cpp \
+#    utf8.c
 
-PX_SRCS=\
-    pxContextGL.cpp \
-    pxImage.cpp \
-    pxImage9.cpp \
-    pxScene2d.cpp \
-    pxRectangle.cpp \
-    pxText.cpp \
-    pxText2.cpp \
-    pxUtil.cpp \
-    pxInterpolators.cpp \
-    pxFileDownloader.cpp \
-    pxTextureCacheObject.cpp \
-    pxMatrix4T.cpp \
-    pxTransform.cpp \
-    pxMain.cpp
+#PX_SRCS=\
+#    pxContextGL.cpp \
+#    pxImage.cpp \
+#    pxImage9.cpp \
+#    pxScene2d.cpp \
+#    pxRectangle.cpp \
+#    pxText.cpp \
+#    pxText2.cpp \
+#    pxUtil.cpp \
+#    pxInterpolators.cpp \
+#    pxFileDownloader.cpp \
+#    pxTextureCacheObject.cpp \
+#    pxMatrix4T.cpp \
+#    pxTransform.cpp \
+#    pxMain.cpp \
+#    pxNode.cpp
 
 EXTDIR=../external
 PXCOREDIR=../../../
@@ -71,34 +72,36 @@ LDFLAGS = -L$(PXLIBS) -lpxCore -pthread -lglut -lGLEW -lGL $(LDEXT) -ldl -lrt -l
 
 
 OBJDIR=obj
-SRCS=$(PX_SRCS) $(RT_SRCS) #testScene.cpp
+#SRCS=$(PX_SRCS) $(RT_SRCS) #testScene.cpp
+
+SRCS=pxNode.cpp
 
 OBJS=$(patsubst %.cpp, $(OBJDIR)/%.o, $(notdir $(SRCS)))
 OBJS:=$(patsubst %.c, $(OBJDIR)/%.o, $(OBJS))
 OBJS: $(SRCS)
 
 
-jsCallback.o: jsbindings/jsCallback.cpp
-	g++ -o $(OBJDIR)/jsCallback.o -Wall $(CXXFLAGS) -c jsbindings/jsCallback.cpp
-
-rtWrapperInit.o: jsbindings/rtWrapperInit.cpp
-	g++ -o $(OBJDIR)/rtWrapperInit.o -Wall $(CXXFLAGS) -c jsbindings/rtWrapperInit.cpp
-
-rtWrapperUtils.o: jsbindings/rtWrapperUtils.cpp
-	g++ -o $(OBJDIR)/rtWrapperUtils.o -Wall $(CXXFLAGS) -c jsbindings/rtWrapperUtils.cpp
-
-rtFunctionWrapper.o: jsbindings/rtFunctionWrapper.cpp
-	g++ -o $(OBJDIR)/rtFunctionWrapper.o -Wall $(CXXFLAGS) -c jsbindings/rtFunctionWrapper.cpp
-
-rtObjectWrapper.o: jsbindings/rtObjectWrapper.cpp
-	g++ -o $(OBJDIR)/rtObjectWrapper.o -Wall $(CXXFLAGS) -c jsbindings/rtObjectWrapper.cpp
-
-
-rtMutexNative.o: linux/rtMutexNative.cpp
-	g++ -o $(OBJDIR)/rtMutexNative.o -Wall $(CXXFLAGS) -c linux/rtMutexNative.cpp
-
-rtThreadPoolNative.o: linux/rtThreadPoolNative.cpp
-	g++ -o $(OBJDIR)/rtThreadPoolNative.o -Wall $(CXXFLAGS) -c linux/rtThreadPoolNative.cpp
+#jsCallback.o: jsbindings/jsCallback.cpp
+#	g++ -o $(OBJDIR)/jsCallback.o -Wall $(CXXFLAGS) -c jsbindings/jsCallback.cpp
+#
+#rtWrapperInit.o: jsbindings/rtWrapperInit.cpp
+#	g++ -o $(OBJDIR)/rtWrapperInit.o -Wall $(CXXFLAGS) -c jsbindings/rtWrapperInit.cpp
+#
+#rtWrapperUtils.o: jsbindings/rtWrapperUtils.cpp
+#	g++ -o $(OBJDIR)/rtWrapperUtils.o -Wall $(CXXFLAGS) -c jsbindings/rtWrapperUtils.cpp
+#
+#rtFunctionWrapper.o: jsbindings/rtFunctionWrapper.cpp
+#	g++ -o $(OBJDIR)/rtFunctionWrapper.o -Wall $(CXXFLAGS) -c jsbindings/rtFunctionWrapper.cpp
+#
+#rtObjectWrapper.o: jsbindings/rtObjectWrapper.cpp
+#	g++ -o $(OBJDIR)/rtObjectWrapper.o -Wall $(CXXFLAGS) -c jsbindings/rtObjectWrapper.cpp
+#
+#
+#rtMutexNative.o: linux/rtMutexNative.cpp
+#	g++ -o $(OBJDIR)/rtMutexNative.o -Wall $(CXXFLAGS) -c linux/rtMutexNative.cpp
+#
+#rtThreadPoolNative.o: linux/rtThreadPoolNative.cpp
+#	g++ -o $(OBJDIR)/rtThreadPoolNative.o -Wall $(CXXFLAGS) -c linux/rtThreadPoolNative.cpp
 
 
 $(OBJDIR)/%.o : %.cpp
@@ -109,24 +112,27 @@ $(OBJDIR)/%.o : %.c
 	@[ -d $(OBJDIR) ] || mkdir -p $(OBJDIR)
 	$(CC) -c $(CXXFLAGS) $< -o $@
 
-MORE=\
-   jsCallback.o \
-   rtWrapperInit.o \
-   rtWrapperUtils.o \
-   rtFunctionWrapper.o \
-   rtObjectWrapper.o \
-   rtMutexNative.o \
-   rtThreadPoolNative.o
+#MORE=\
+#   jsCallback.o \
+#   rtWrapperInit.o \
+#   rtWrapperUtils.o \
+#   rtFunctionWrapper.o \
+#   rtObjectWrapper.o \
+#   rtMutexNative.o \
+#   rtThreadPoolNative.o
 
-MOREDIR=\
-   $(OBJDIR)/jsCallback.o \
-   $(OBJDIR)/rtWrapperInit.o \
-   $(OBJDIR)/rtWrapperUtils.o \
-   $(OBJDIR)/rtFunctionWrapper.o \
-   $(OBJDIR)/rtObjectWrapper.o \
-   $(OBJDIR)/rtMutexNative.o \
-   $(OBJDIR)/rtThreadPoolNative.o
+#MOREDIR=\
+#   $(OBJDIR)/jsCallback.o \
+#   $(OBJDIR)/rtWrapperInit.o \
+#   $(OBJDIR)/rtWrapperUtils.o \
+#   $(OBJDIR)/rtFunctionWrapper.o \
+#   $(OBJDIR)/rtObjectWrapper.o \
+#   $(OBJDIR)/rtMutexNative.o \
+#   $(OBJDIR)/rtThreadPoolNative.o
 
-pxNode: $(MORE) $(OBJS)
-	$(CXX) $(OBJS) $(MOREDIR) $(LDFLAGS) -o pxNode
+#pxNode: $(MORE) $(OBJS)
+#	$(CXX) $(OBJS) $(MOREDIR) $(LDFLAGS) -o pxNode
+
+pxNode: $(OBJS)
+	$(CXX) $(OBJS) $(LDFLAGS) -o pxNode
 
