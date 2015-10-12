@@ -1,0 +1,25 @@
+
+9/12/2015
+=========
+
+Initial steps of creating an 'rtNode' module that will -
+
+  * Own cration of 'node' context and isolate data
+  * More correctly create rtObject/Scene and add/create objects into this context/isolate
+  * Skeleton class/interface provided in 'rtNode.h'
+
+Intention is to begin to depricate "load.js" and JS invoked scene creation.  
+Prefer C++ ownership and/or threading.
+
+Aim to make 'node' more "embeddable" 
+
+TODO:
+
+- Fix 'node' initialization - similar to node::Start()
+
+- Refine scope of a given 'node" context
+- Implement add/remove rtObject to JS execution context
+- Implement threading options for JS execution context
+- Provide parental/child scope with optional "kill" child.
+ 
+

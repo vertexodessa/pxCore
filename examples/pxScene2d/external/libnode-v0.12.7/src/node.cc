@@ -155,21 +155,24 @@ static Isolate* node_isolate = NULL;
 int WRITE_UTF8_FLAGS = v8::String::HINT_MANY_WRITES_EXPECTED |
                        v8::String::NO_NULL_TERMINATION;
 
-class ArrayBufferAllocator : public ArrayBuffer::Allocator {
- public:
-  // Impose an upper limit to avoid out of memory errors that bring down
-  // the process.
-  static const size_t kMaxLength = 0x3fffffff;
-  static ArrayBufferAllocator the_singleton;
-  virtual ~ArrayBufferAllocator() {}
-  virtual void* Allocate(size_t length);
-  virtual void* AllocateUninitialized(size_t length);
-  virtual void Free(void* data, size_t length);
- private:
-  ArrayBufferAllocator() {}
-  ArrayBufferAllocator(const ArrayBufferAllocator&);
-  void operator=(const ArrayBufferAllocator&);
-};
+//
+//  NOTE:  Moving to 'node.h'
+//
+//class ArrayBufferAllocator : public ArrayBuffer::Allocator {
+// public:
+//  // Impose an upper limit to avoid out of memory errors that bring down
+//  // the process.
+//  static const size_t kMaxLength = 0x3fffffff;
+//  static ArrayBufferAllocator the_singleton;
+//  virtual ~ArrayBufferAllocator() {}
+//  virtual void* Allocate(size_t length);
+//  virtual void* AllocateUninitialized(size_t length);
+//  virtual void Free(void* data, size_t length);
+// private:
+//  ArrayBufferAllocator() {}
+//  ArrayBufferAllocator(const ArrayBufferAllocator&);
+//  void operator=(const ArrayBufferAllocator&);
+//};
 
 ArrayBufferAllocator ArrayBufferAllocator::the_singleton;
 
@@ -3660,6 +3663,217 @@ Environment* CreateEnvironment(Isolate* isolate,
   return env;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//// MODIFIED CODE
+//// MODIFIED CODE
+
+// Build a context for plnode
+void buildContext(int argc, char **argv,
+                  v8::Handle<ObjectTemplate>  globaltemplate,
+                  v8::Persistent<v8::Context> &contextref,
+                  v8::Handle<Object>          &processref,
+                  char**                      &argvcopyref)
+{
+  const char* replaceInvalid = getenv("NODE_INVALID_UTF8");
+
+  if (replaceInvalid == NULL)
+    WRITE_UTF8_FLAGS |= String::REPLACE_INVALID_UTF8;
+
+#if !defined(_WIN32)
+  // Try hard not to lose SIGUSR1 signals during the bootstrap process.
+  InstallEarlyDebugSignalHandler();
+#endif
+
+  assert(argc > 0);
+
+  // Hack aroung with the argv pointer. Used for process.title = "blah".
+  argv = uv_setup_args(argc, argv);
+
+#if 1
+  // This needs to run *before* V8::Initialize().  The const_cast is not
+  // optional, in case you're wondering.
+  int exec_argc;
+  const char** exec_argv;
+  Init(&argc, const_cast<const char**>(argv), &exec_argc, &exec_argv);
+
+  int code;
+  V8::Initialize();
+
+  node_is_initialized = true;
+  {
+    Locker locker(node_isolate);
+
+    Isolate::Scope isolate_scope(node_isolate);
+    HandleScope    handle_scope( node_isolate);
+
+    Local<Context> context = Context::New(node_isolate);
+
+    Environment* env = CreateEnvironment(
+        node_isolate,
+        uv_default_loop(),
+        context,
+        argc,
+        argv,
+        exec_argc,
+        exec_argv);
+
+    Context::Scope context_scope(context);
+
+    // Start debug agent when argv has --debug
+    if (use_debug_agent)
+    {
+      StartDebug(env, debug_wait_connect);
+    }
+
+    LoadEnvironment(env);
+
+    contextref.Reset(node_isolate, context);
+
+    // Enable debugger
+    if (use_debug_agent)
+    {
+      EnableDebug(env);
+    }
+
+    printf("%s() - post-Debug()...\n", __FUNCTION__);// JUNK JUNK JUNK JUNK JUNK JUNK
+
+  //  contextref = context;
+  //  processref = process_l;
+
+//    bool more;
+//    do {
+//      more = uv_run(env->event_loop(), UV_RUN_ONCE);
+//      if (more == false) {
+//        EmitBeforeExit(env);
+
+//        // Emit `beforeExit` if the loop became alive either after emitting
+//        // event, or after running some callbacks.
+//        more = uv_loop_alive(env->event_loop());
+//        if (uv_run(env->event_loop(), UV_RUN_NOWAIT) != 0)
+//          more = true;
+//      }
+//    } while (more == true);
+//    code = EmitExit(env);
+//    RunAtExit(env);
+
+//    env->Dispose();
+//    env = NULL;
+  }
+
+#else
+  // Logic to duplicate argv as Init() modifies arguments
+  // that are passed into it.
+  char **argv_copy = copy_argv(argc, argv);
+
+  // This needs to run *before* V8::Initialize()
+  // Use copy here as to not modify the original argv:
+  Init(argc, argv_copy);
+
+  V8::Initialize();
+  {
+    //Locker locker;
+    HandleScope handle_scope;
+
+    // Create the one and only Context.
+    v8::Persistent<Context> context = Context::New(NULL, globaltemplate);
+    Context::Scope context_scope(context);
+
+    // Use original argv, as we're just copying values out of it.
+    Handle<Object> process_l = SetupProcessObject(argc, argv);
+    v8_typed_array::AttachBindings(context->Global());
+
+    // Create all the objects, load modules, do everything.
+    // so your next reading stop should be node::Load()!
+    Load(process_l);
+    contextref = context;
+    processref = process_l;
+    argvcopyref = argv_copy;
+  }
+#endif
+
+}
+
+// runContext
+//     must call buildContext(0) first
+int runContext(
+    v8::Persistent<v8::Context> &context,
+    v8::Handle<Object> &process, char** argvcopy)
+{
+#if 1
+
+
+  printf("%s() - ENTER...\n", __FUNCTION__);// JUNK JUNK JUNK JUNK JUNK JUNK
+
+  bool more;
+  do {
+    more = uv_run(env->event_loop(), UV_RUN_ONCE);
+
+    printf("%s() - post-uv_run()...\n", __FUNCTION__);// JUNK JUNK JUNK JUNK JUNK JUNK
+
+    if (more == false) {
+      EmitBeforeExit(env);
+
+      // Emit `beforeExit` if the loop became alive either after emitting
+      // event, or after running some callbacks.
+      more = uv_loop_alive(env->event_loop());
+
+      if (uv_run(env->event_loop(), UV_RUN_NOWAIT) != 0)
+        more = true;
+    }
+
+    printf("%s() - while()...\n", __FUNCTION__);// JUNK JUNK JUNK JUNK JUNK JUNK
+
+  } while (more == true);
+
+  code = EmitExit(env);
+  RunAtExit(env);
+
+  env->Dispose();
+  env = NULL;
+
+#else
+  // All our arguments are loaded. We've evaluated all of the scripts. We
+  // might even have created TCP servers. Now we enter the main eventloop. If
+  // there are no watchers on the loop (except for the ones that were
+  // uv_unref'd) then this function exits. As long as there are active
+  // watchers, it blocks.
+
+  printf("%s() - ENTER...\n", __FUNCTION__);
+
+  uv_run(uv_default_loop(), UV_RUN_DEFAULT);
+
+  return 0;
+
+  /*
+
+////MLM: We don't exit.
+
+  EmitExit(process);
+  return 0;
+  */
+  /*
+
+  RunAtExit();
+
+#ifndef NDEBUG
+  context.Dispose();
+#endif
+
+#ifndef NDEBUG
+  // Clean up. Not strictly necessary.
+  V8::Dispose();
+#endif  // NDEBUG
+
+  // Clean up the copy:
+  free(argvcopy);
+
+  return 0;
+  */
+#endif
+}
+//// MODIFIED CODE
+//// MODIFIED CODE
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 int Start(int argc, char** argv) {
   const char* replaceInvalid = getenv("NODE_INVALID_UTF8");

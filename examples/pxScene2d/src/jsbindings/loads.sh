@@ -9,3 +9,5 @@ export LD_LIBRARY_PATH=../../external/png/.libs/:../../external/jpg/.libs/:../..
 echo $LD_LIBRARY_PATH
 
 ../pxNode load.js $*
+
+#../rtNode load.js $*

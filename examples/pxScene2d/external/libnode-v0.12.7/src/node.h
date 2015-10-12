@@ -61,6 +61,14 @@
 #include "v8.h"  // NOLINT(build/include_order)
 #include "node_version.h"  // NODE_MODULE_VERSION
 
+//
+//// MODIFIED CODE .. added 'node.h'
+//
+#include "node.h"
+//
+//// MODIFIED CODE
+//
+
 #define NODE_DEPRECATED(msg, fn) V8_DEPRECATED(msg, fn)
 
 // Forward-declare libuv loop
@@ -173,6 +181,39 @@ namespace node {
 NODE_EXTERN extern bool no_deprecation;
 
 NODE_EXTERN int Start(int argc, char *argv[]);
+
+//// MODIFIED CODE
+//// MODIFIED CODE
+
+class ArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
+ public:
+  // Impose an upper limit to avoid out of memory errors that bring down
+  // the process.
+  static const size_t kMaxLength = 0x3fffffff;
+  static ArrayBufferAllocator the_singleton;
+  virtual ~ArrayBufferAllocator() {}
+  virtual void* Allocate(size_t length);
+  virtual void* AllocateUninitialized(size_t length);
+  virtual void Free(void* data, size_t length);
+ private:
+  ArrayBufferAllocator() {}
+  ArrayBufferAllocator(const ArrayBufferAllocator&);
+  void operator=(const ArrayBufferAllocator&);
+};
+
+
+NODE_EXTERN void buildContext(int argc, char **argv,
+                              v8::Handle<v8::ObjectTemplate>  globaltemplate,
+                              v8::Persistent<v8::Context>     &contextref,
+                              v8::Handle<v8::Object>          &processref,
+                              char** &argvcopyref);
+
+NODE_EXTERN int runContext(v8::Persistent<v8::Context> &context,
+                           v8::Handle<v8::Object>      &process, char** argvcopy);
+
+//// MODIFIED CODE
+//// MODIFIED CODE
+
 NODE_EXTERN void Init(int* argc,
                       const char** argv,
                       int* exec_argc,

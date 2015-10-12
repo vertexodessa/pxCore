@@ -15,8 +15,6 @@
 #include "node.h"
 #include "v8.h"
 
-//===============================================================================================
-
 typedef struct args_
 {
   int    argc;
@@ -27,7 +25,6 @@ typedef struct args_
 }
 args_t;
 
-//===============================================================================================
 
 pthread_t worker;
 
@@ -47,11 +44,16 @@ void *jsThread(void *ptr)
 
 //===============================================================================================
 
-int main(int argc, char* argv[])
+v8::Handle<v8::ObjectTemplate>  globaltemplate;
+v8::Handle<v8::Object>          processref;
+v8::Persistent<v8::Context>     contextref;
+
+
+int main(int argc, char** argv)
 {
   args_t aa(argc, argv);
 
-#if 0
+#if 1
   printf("STARTING via *OTHER* THREAD... argc = %d\n", argc);
 
   if(pthread_create(&worker, NULL, jsThread, (void *) &aa))
@@ -70,5 +72,3 @@ int main(int argc, char* argv[])
 
   return 0;
 }
-
-//===============================================================================================
