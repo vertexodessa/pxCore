@@ -180,10 +180,11 @@ namespace node {
 
 NODE_EXTERN extern bool no_deprecation;
 
-NODE_EXTERN int Start(int argc, char *argv[]);
 
-//// MODIFIED CODE
-//// MODIFIED CODE
+NODE_EXTERN extern uv_async_t dispatch_debug_messages_async;   /*MODIFIED CODE*/
+NODE_EXTERN extern v8::Isolate* node_isolate;                  /*MODIFIED CODE*/
+NODE_EXTERN extern bool node_is_initialized;                   /*MODIFIED CODE*/
+
 
 class ArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
  public:
@@ -202,24 +203,18 @@ class ArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
 };
 
 
-NODE_EXTERN void buildContext(int argc, char **argv,
-                              v8::Handle<v8::ObjectTemplate>  globaltemplate,
-                              v8::Persistent<v8::Context>     &contextref,
-                              v8::Handle<v8::Object>          &processref,
-                              char** &argvcopyref);
-
-NODE_EXTERN int runContext(v8::Persistent<v8::Context> &context,
-                           v8::Handle<v8::Object>      &process, char** argvcopy);
-
-//// MODIFIED CODE
-//// MODIFIED CODE
 
 NODE_EXTERN void Init(int* argc,
                       const char** argv,
                       int* exec_argc,
                       const char*** exec_argv);
 
-class Environment;
+class Environment; 
+
+NODE_EXTERN int  Start(int argc, char *argv[]);                          /*MODIFIED CODE*/
+NODE_EXTERN void StartDebug(Environment* env, bool wait);                /*MODIFIED CODE*/
+NODE_EXTERN void EnableDebug(Environment* env);                          /*MODIFIED CODE*/
+NODE_EXTERN void DispatchDebugMessagesAsyncCallback(uv_async_t* handle); /*MODIFIED CODE*/
 
 NODE_EXTERN Environment* CreateEnvironment(v8::Isolate* isolate,
                                            struct uv_loop_s* loop,
