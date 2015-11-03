@@ -33,94 +33,12 @@
 using namespace v8;
 using namespace node;
 
-using v8::Array;
-using v8::ArrayBuffer;
 
 //#define USE_BASIC_EXAMPLE
 //#define USE_NODESTART_EXAMPLE
-#if 1
+#define USE_MY_ALLOCATOR
 
-//extern node::ArrayBufferAllocator::the_singleton;
-
-#else
-
-//###
-class ArrayBufferAllocator : public ArrayBuffer::Allocator
-{
- public:
-  // Impose an upper limit to avoid out of memory errors that bring down
-  // the process.
-  static const size_t kMaxLength = 0x3fffffff;
-  static ArrayBufferAllocator the_singleton;
-  virtual ~ArrayBufferAllocator() {}
-  virtual void* Allocate(size_t length);
-  virtual void* AllocateUninitialized(size_t length);
-  virtual void Free(void* data, size_t length);
- private:
-  ArrayBufferAllocator() {}
-  ArrayBufferAllocator(const ArrayBufferAllocator&);
-  void operator=(const ArrayBufferAllocator&);
-};
-#endif
-
-ArrayBufferAllocator ArrayBufferAllocator::the_singleton;
-
-
-void* ArrayBufferAllocator::Allocate(size_t length) {
-  if (length > kMaxLength)
-    return NULL;
-  char* data = new char[length];
-  memset(data, 0, length);
-  return data;
-}
-
-
-void* ArrayBufferAllocator::AllocateUninitialized(size_t length) {
-  if (length > kMaxLength)
-    return NULL;
-  return new char[length];
-}
-
-
-void ArrayBufferAllocator::Free(void* data, size_t length) {
-  delete[] static_cast<char*>(data);
-}
-
-
-
-// process-relative uptime base, initialized at start-up
-static double prog_start_time;
-static bool debugger_running;
-static uv_async_t dispatch_debug_messages_async;
-
-static Isolate* node_isolate = NULL;
-
-// Called from V8 Debug Agent TCP thread.
-static void DispatchMessagesDebugAgentCallback(Environment* env) {
-  // TODO(indutny): move async handle to environment
-  uv_async_send(&dispatch_debug_messages_async);
-}
-
-
-// Called from the main thread.
-static void DispatchDebugMessagesAsyncCallback(uv_async_t* handle) {
-  if (debugger_running == false) {
-    fprintf(stderr, "Starting debugger agent.\n");
-
-    Environment* env = Environment::GetCurrent(node_isolate);
-    Context::Scope context_scope(env->context());
-
-//    StartDebug(env, false);
-//    EnableDebug(env);
-  }
-  Isolate::Scope isolate_scope(node_isolate);
-  v8::Debug::ProcessDebugMessages();
-}
-
-
-//###
-
-//===============================================================================================
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 typedef struct args_
 {
@@ -132,7 +50,7 @@ typedef struct args_
 }
 args_t;
 
-//===============================================================================================
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #ifdef USE_NODESTART_EXAMPLE
 
@@ -153,7 +71,7 @@ void *jsThread(void *ptr)
 }
 #endif
 
-//===============================================================================================
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #ifdef USE_BASIC_EXAMPLE
 Handle<ObjectTemplate>  globaltemplate;
@@ -217,29 +135,19 @@ int main(int argc, char** argv)
 #endif
 #else
 
-
- // node_isolate = Isolate::New();
-
   rtNode myNode;
 
   rtNodeContextRef ctx = myNode.createContext();
 
-  node_isolate = ctx->mIsolate;
+  node_isolate = ctx->mIsolate; // Must come first !!
+
   myNode.init(s_gArgs->argc, s_gArgs->argv);
+  printf("Init Done.\n");
 
-  // - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-//  if(argc > 1)
-//  {
-//    printf("\nRun file... %s\n\n", argv[1]);
-//    ctx->run_file(argv[1]);
-//  }
-
+  printf("Start Run...\n");
   ctx->run("");
 
-  printf("Run Done..\n");
-
-  // - - - - - - - - - - - - - - - - - - - - - - - - - -
+  printf("Run Done...\n");
 
   printf("\n Term...");
   myNode.term();
@@ -251,7 +159,8 @@ int main(int argc, char** argv)
   return 0;
 }
 
-//===============================================================================================
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 rtNodeContext::rtNodeContext() :
   mIsolate(NULL), mRefCount(0)
@@ -280,7 +189,6 @@ void rtNodeContext::addObject(std::string const& name, rtObjectRef const& obj)
 
 }
 
-
 inline bool file_exists(const std::string& name)
 {
   struct stat buffer;
@@ -302,22 +210,28 @@ rtObjectRef rtNodeContext::run_file(std::string file)
   return run(script.str());
 }
 
-
 rtObjectRef rtNodeContext::run(std::string js)
 {
   int exec_argc;
   const char** exec_argv;
-//  Init(&s_gArgs->argc, const_cast<const char**>(s_gArgs->argv), &exec_argc, &exec_argv);
 
-  {
-    Locker         locker(mIsolate);
+  printf("run() >> Initialize()...\n");
+
+  V8::Initialize();
+  node_is_initialized = true;
+
+  printf("run() >> Initialize()... DONE\n");
+
+  {//scope
+
+    Locker                locker(mIsolate);
     Isolate::Scope isolate_scope(mIsolate);
-    HandleScope    handle_scope(mIsolate);    // Create a stack-allocated handle scope.
+    HandleScope     handle_scope(mIsolate);    // Create a stack-allocated handle scope.
 
     // Enter the context for compiling and running ... Persistent > Local
-    v8::Local<v8::Context> local_context(v8::Local<v8::Context>::New(mIsolate, mContext));
+    Local<Context> local_context = Context::New(mIsolate);
 
-    //*******************
+    printf("run() >> CreateEnvironment()...\n");
 
     Environment* env = CreateEnvironment(
           mIsolate,
@@ -328,11 +242,15 @@ rtObjectRef rtNodeContext::run(std::string js)
           exec_argc,
           exec_argv);
 
+    printf("run() >> CreateEnvironment()... DONE\n");
+
     Context::Scope context_scope(local_context);
+
+    printf("run() >> LoadEnvironment()... \n");
 
     LoadEnvironment(env);
 
-    //*******************
+    printf("run() >> LoadEnvironment()... DONE\n");
 
     int code;
     bool more;
@@ -357,8 +275,6 @@ rtObjectRef rtNodeContext::run(std::string js)
 
     code = EmitExit(env);
     RunAtExit(env);
-
-    //*******************
   }//scope
 
   getchar();
@@ -366,7 +282,8 @@ rtObjectRef rtNodeContext::run(std::string js)
   return  rtObjectRef(0);
 }
 
-//===============================================================================================
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 rtNode::rtNode() :
   mPlatform(NULL), mPxNodeExtension(NULL)
@@ -374,80 +291,15 @@ rtNode::rtNode() :
 
 }
 
-
-
 void rtNode::init(int argc, char** argv)
 {
-  // Hack around with the argv pointer. Used for process.title = "blah".
-  argv = uv_setup_args(argc, argv);
-
-  // Initialize V8.
-  // V8::InitializeICU();
-  // V8::InitializeExternalStartupData(s_gArgs->argv[0]);
-
-//   mPlatform = v8::platform::CreateDefaultPlatform();
-//   V8::InitializePlatform(mPlatform);
-
   int exec_argc;
   const char** exec_argv;
-//  Init(&argc, const_cast<const char**>(argv), &exec_argc, &exec_argv);
 
-//##
+  Init(&argc, const_cast<const char**>(argv), &exec_argc, &exec_argv);
 
-  printf("\n  ####   1");
-
-  // Initialize prog_start_time to get relative uptime.
-  prog_start_time = static_cast<double>(uv_now(uv_default_loop()));
-
-  printf("\n  ####   2");
-
-  // Make inherited handles noninheritable.
-  uv_disable_stdio_inheritance();
-
-  printf("\n  ####   3");
-
-  // init async debug messages dispatching
-  // FIXME(bnoordhuis) Should be per-isolate or per-context, not global.
-  uv_async_init(uv_default_loop(),
-                &dispatch_debug_messages_async,
-                DispatchDebugMessagesAsyncCallback);
-
-  printf("\n  ####   3");
-
-  uv_unref(reinterpret_cast<uv_handle_t*>(&dispatch_debug_messages_async));
-//##
-  printf("\n  ####   4");
-
-  V8::SetArrayBufferAllocator(&ArrayBufferAllocator::the_singleton);
-
-  printf("\n  ####   5");
-
-  V8::Initialize();
-
-  printf("\n  ####   6");
-
-  //  printf(" RegisterExtension ... \n");
-
-  // Register PX bindings code...
-//  mPxNodeExtension = new Extension(PX_NODE_EXTENSION, PX_NODE_EXTENSION_PATH);
-//  RegisterExtension(mPxNodeExtension);
-
-
-/*
-  printf("\n EXTENSION >>   name: %s  ",       mPxNodeExtension->name());
-  printf("\n EXTENSION >> length: %d ",  (int) mPxNodeExtension->source_length());
-  printf("\n EXTENSION >> dcount: %d ",        mPxNodeExtension->dependency_count());
-
-        int    dcount = mPxNodeExtension->dependency_count();
-  const char** deps   = mPxNodeExtension->dependencies();
-
-  for(int i =0; i < dcount; i++)
-  {
-    printf("\n EXTENSION >> dep: %s  ", deps[i]);
-  }
-*/
-
-//  printf(" RegisterExtension ... Done\n");
+  // Hack around with the argv pointer. Used for process.title = "blah".
+  argv = uv_setup_args(argc, argv);
 }
 
 void rtNode::term()
@@ -475,16 +327,14 @@ rtNodeContextRef rtNode::getGlobalContext() const
 
 rtNodeContextRef rtNode::createContext(bool ownThread)
 {
-
   rtNodeContextRef ctxref = new rtNodeContext;
 
   return ctxref;
 }
 
-//===============================================================================================
-//===============================================================================================
-//===============================================================================================
-//===============================================================================================
-//===============================================================================================
-//===============================================================================================
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

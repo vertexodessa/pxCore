@@ -7,17 +7,38 @@ clean:
 VPATH=linux
 
 RT_SRCS=\
+rtFile.cpp \
     rtError.cpp \
-    rtObject.cpp \
     rtLog.cpp \
+    rtPathUtils.cpp \
     rtString.cpp \
+    rtObject.cpp \
+    rtFunctionWrapper.cpp \
+    rtObjectWrapper.cpp \
     rtValue.cpp \
-    rtFile.cpp \
+    jsCallback.cpp \
+    linux/rtMutexNative.cpp \
+    linux/rtThreadPoolNative.cpp \
+    rtThreadPool.cpp \
     rtThreadTask.cpp \
-    rtLibrary.cpp \
+    rtWrapperInit.cpp \
+    rtWrapperUtils.cpp \
     utf8.c
+    #    rtLibrary.cpp \
 
-#PX_SRCS=\
+PX_SRCS=\
+    pxScene2d.cpp \
+    pxRectangle.cpp \
+    pxText.cpp \
+    pxText2.cpp \
+    pxImage.cpp \
+    pxUtil.cpp \
+    pxContextGL.cpp \
+    pxImage9.cpp \
+    pxTextureCacheObject.cpp \
+    pxFileDownloader.cpp \
+    pxInterpolators.cpp
+
 #    pxContextGL.cpp \
 #    pxImage.cpp \
 #    pxImage9.cpp \
@@ -53,8 +74,8 @@ SEARCH=\
   -I$(NODEINC)/src \
   -I$(NODEINC)/deps/uv/include \
   -I$(NODEINC)/deps/v8 \
-  -I$(NODEINC)/deps/debugger-agent/include
- # -I$(NODEINC)/deps/v8/include
+  -I$(NODEINC)/deps/debugger-agent/include \
+  -I$(NODEINC)/deps/v8/include
 
 
 CXXFLAGS= -g $(SEARCH) -DENABLE_GLUT -DRT_PLATFORM_LINUX -DPX_PLATFORM_GLUT
@@ -81,7 +102,23 @@ rtMutexNative.o: linux/rtMutexNative.cpp
 rtThreadPoolNative.o: linux/rtThreadPoolNative.cpp
 	g++ -o $(OBJDIR)/rtThreadPoolNative.o -Wall $(CXXFLAGS) -c linux/rtThreadPoolNative.cpp
 
-SRCS=rtNode.cpp $(RT_SRCS)
+$(OBJDIR)/rtWrapperInit.o: jsbindings/rtWrapperInit.cpp
+	g++ -o $(OBJDIR)/rtWrapperInit.o -Wall $(CXXFLAGS) -c jsbindings/rtWrapperInit.cpp
+
+$(OBJDIR)/rtWrapperUtils.o: jsbindings/rtWrapperUtils.cpp
+	g++ -o $(OBJDIR)/rtWrapperUtils.o -Wall $(CXXFLAGS) -c jsbindings/rtWrapperUtils.cpp
+
+$(OBJDIR)/rtFunctionWrapper.o: jsbindings/rtFunctionWrapper.cpp
+	g++ -o $(OBJDIR)/rtFunctionWrapper.o -Wall $(CXXFLAGS) -c jsbindings/rtFunctionWrapper.cpp
+
+$(OBJDIR)/rtObjectWrapper.o: jsbindings/rtObjectWrapper.cpp
+	g++ -o $(OBJDIR)/rtObjectWrapper.o -Wall $(CXXFLAGS) -c jsbindings/rtObjectWrapper.cpp
+
+$(OBJDIR)/jsCallback.o: jsbindings/jsCallback.cpp
+	g++ -o $(OBJDIR)/jsCallback.o -Wall $(CXXFLAGS) -c jsbindings/jsCallback.cpp
+
+
+SRCS=$(PX_SRCS) $(RT_SRCS) rtNode.cpp
 
 OBJS=$(patsubst %.cpp, $(OBJDIR)/%.o, $(notdir $(SRCS)))
 OBJS:=$(patsubst %.c, $(OBJDIR)/%.o, $(OBJS))
@@ -96,24 +133,26 @@ $(OBJDIR)/%.o : %.c
 	$(CC) -c $(CXXFLAGS) $< -o $@
 
 MORE=\
-#   jsCallback.o \
-#   rtWrapperInit.o \
-#   rtWrapperUtils.o \
-#   rtFunctionWrapper.o \
-#   rtObjectWrapper.o \
-   rtMutexNative.o \
-   rtThreadPoolNative.o
+   jsCallback.o \
+   rtWrapperInit.o \
+   rtWrapperUtils.o \
+   rtFunctionWrapper.o \
+   rtObjectWrapper.o
+#   rtMutexNative.o
+#   rtThreadPoolNative.o
+#   utf8.o
 
-MOREDIR=\
+#MOREDIR=\
 #   $(OBJDIR)/jsCallback.o \
 #   $(OBJDIR)/rtWrapperInit.o \
 #   $(OBJDIR)/rtWrapperUtils.o \
 #   $(OBJDIR)/rtFunctionWrapper.o \
-#   $(OBJDIR)/rtObjectWrapper.o \
-   $(OBJDIR)/rtMutexNative.o \
-   $(OBJDIR)/rtThreadPoolNative.o
+#   $(OBJDIR)/rtObjectWrapper.o
+#   $(OBJDIR)/rtMutexNative.o
+#   $(OBJDIR)/rtThreadPoolNative.o
+#   $(OBJDIR)/utf8.o
 
 
-rtNode: $(MORE) $(OBJS)
-	$(CXX) $(OBJS) $(MOREDIR) $(LDFLAGS) -o rtNode
+rtNode: $(OBJS)
+	$(CXX) $(OBJS) $(LDFLAGS) -o rtNode
 
