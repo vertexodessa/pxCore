@@ -305,7 +305,7 @@ static void disposeNode(const FunctionCallbackInfo<Value>& args)
     wrapper->dispose();
 }
 
-static void getScene(const FunctionCallbackInfo<Value>& args)
+void setupScene(const FunctionCallbackInfo<Value>& args)
 {
   if (mainWindow == NULL)
   {
@@ -347,6 +347,11 @@ static void getScene(const FunctionCallbackInfo<Value>& args)
 
   EscapableHandleScope scope(args.GetIsolate());
   args.GetReturnValue().Set(scope.Escape(mainWindow->scene(args.GetIsolate())));
+}
+
+static void getScene(const FunctionCallbackInfo<Value>& args)
+{
+  setupScene(args);
 }
 
 void ModuleInit(
