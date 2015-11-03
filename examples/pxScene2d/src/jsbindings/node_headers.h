@@ -5,10 +5,12 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #endif
-#include <node.h>
-#include <node_object_wrap.h>
-#include <v8.h>
-#include <uv.h>
+
+#include "uv.h"
+#include "node.h"
+#include "node_object_wrap.h"
+#include "v8.h"
+
 #ifndef WIN32
 #pragma GCC diagnostic pop
 #endif
