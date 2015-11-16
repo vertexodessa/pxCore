@@ -1,3 +1,5 @@
+var scene = getScene()
+
 var root = scene.root;
 
 var url;

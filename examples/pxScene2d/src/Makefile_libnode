@@ -7,7 +7,7 @@ clean:
 VPATH=linux
 
 RT_SRCS=\
-rtFile.cpp \
+    rtFile.cpp \
     rtError.cpp \
     rtLog.cpp \
     rtPathUtils.cpp \
@@ -21,9 +21,10 @@ rtFile.cpp \
     linux/rtThreadPoolNative.cpp \
     rtThreadPool.cpp \
     rtThreadTask.cpp \
-    rtWrapperInit.cpp \
     rtWrapperUtils.cpp \
     utf8.c
+    #    rtWrapperInit.cpp \
+    #
     #    rtLibrary.cpp \
 
 PX_SRCS=\
@@ -86,8 +87,11 @@ LDPNG    = -L$(EXTDIR)/png/.libs -lpng16
 LDJPG    = -L$(EXTDIR)/jpg/.libs -ljpeg
 LDFT     = -L$(EXTDIR)/ft/objs/.libs -lfreetype
 LDCURL   = -L$(EXTDIR)/curl/lib/.libs -lcurl
-LDNODE   = -L$(NODEDIR)/out/Release/obj.target
-LDNODEV8 = -L$(NODEDIR)/out/Release
+LDNODE   = -L$(NODEDIR)/out/Debug/obj.target
+LDNODEV8 = -L$(NODEDIR)/out/Debug
+
+#LDNODE   = -L$(NODEDIR)/out/Release/obj.target
+#LDNODEV8 = -L$(NODEDIR)/out/Release
 
 LDEXT   = $(LDPNG) $(LDJPG) $(LDFT) $(LDCURL) $(LDNODE) $(LDNODEV8)
 
@@ -118,7 +122,7 @@ $(OBJDIR)/jsCallback.o: jsbindings/jsCallback.cpp
 	g++ -o $(OBJDIR)/jsCallback.o -Wall $(CXXFLAGS) -c jsbindings/jsCallback.cpp
 
 
-SRCS=$(PX_SRCS) $(RT_SRCS) rtNode.cpp
+SRCS=$(PX_SRCS) $(RT_SRCS) rtNode.cpp pxMain_node.cpp
 
 OBJS=$(patsubst %.cpp, $(OBJDIR)/%.o, $(notdir $(SRCS)))
 OBJS:=$(patsubst %.c, $(OBJDIR)/%.o, $(OBJS))

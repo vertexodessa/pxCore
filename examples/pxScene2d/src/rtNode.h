@@ -14,9 +14,21 @@ class rtNodeContext;
 typedef rtRefT<rtNodeContext> rtNodeContextRef;
 
 
-//===============================================================================================
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-class rtNodeContext
+typedef struct args_
+{
+  int    argc;
+  char **argv;
+
+  args_() { argc = 0; argv = NULL; }
+  args_(int n = 0, char** a = NULL) : argc(n), argv(a) {}
+}
+args_t;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+class rtNodeContext  // V8
 {
 public:
   rtNodeContext();
@@ -25,7 +37,7 @@ public:
   void addObject(std::string const& name, rtObjectRef const& obj);
 
   rtObjectRef run(std::string js);
-  rtObjectRef run_file(std::string js);
+  rtObjectRef run_thread(std::string js);
 
   unsigned long AddRef()
   {
@@ -39,15 +51,24 @@ public:
     return l;
   }
 
+  std::string   js_file;
+
   v8::Isolate                   *mIsolate;
+  v8::Persistent<v8::Context>    mContext;
+  v8::Persistent<v8::Object>     rtWrappers;
+
+  v8::Persistent<v8::ObjectTemplate>  globalTemplate;
 
 private:
-  v8::Persistent<v8::Context>    mContext;
+  rtObjectRef run_snippet(std::string js);
+  rtObjectRef run_file(std::string file);
+
+  int startThread(std::string js);
 
   int mRefCount;
 };
 
-//===============================================================================================
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 class rtNode
 {
@@ -66,7 +87,7 @@ private:
   v8::Extension *mPxNodeExtension;
 };
 
-//===============================================================================================
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #endif // RTNODE_H
 

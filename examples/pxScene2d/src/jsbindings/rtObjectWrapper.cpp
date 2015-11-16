@@ -6,9 +6,9 @@
 
 using namespace v8;
 
-static const char* kClassName = "Object";
+static const char* kClassName   = "rtObject";
 static const char* kFuncAllKeys = "allKeys";
-static const char* kPropLength = "length";
+static const char* kPropLength  = "length";
 
 const char* jsObjectWrapper::kIsJavaScriptObjectWrapper = "8907a0a6-ef86-4c3d-aea1-c40c0aa2f6f0";
 

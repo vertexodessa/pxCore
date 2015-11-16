@@ -1,12 +1,5 @@
 // pxCore CopyRight 2007-2015 John Robinson
-// main.cpp
-
-#ifdef WIN32
-#include <windows.h>
-#endif
-
-#include <stdlib.h>
-#include <stdio.h>
+// rtNode.cpp
 
 #include <string>
 #include <fstream>
@@ -14,45 +7,47 @@
 #include <iostream>
 #include <sstream>
 
-#include <sys/stat.h>
-#include <unistd.h>
-
 #include "pxCore.h"
 
-
 #include "rtNode.h"
+
+#include "jsbindings/rtObjectWrapper.h"
+#include "jsbindings/rtFunctionWrapper.h"
 
 #include "node.h"
 #include "node_javascript.h"
 #include "env.h"
 #include "env-inl.h"
 
-#define PX_NODE_EXTENSION       "px"
-#define PX_NODE_EXTENSION_PATH  "./jsbindings/build/Debug/px.node"
-
 using namespace v8;
 using namespace node;
 
-
-//#define USE_BASIC_EXAMPLE
-//#define USE_NODESTART_EXAMPLE
-#define USE_MY_ALLOCATOR
+extern args_t *s_gArgs;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-typedef struct args_
+#ifdef WIN32
+static DWORD __rt_main_thread__;
+#else
+static pthread_t __rt_main_thread__;
+static pthread_t __rt_render_thread__;
+static pthread_mutex_t gInitLock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t gInitCond  = PTHREAD_COND_INITIALIZER;
+static bool gInitComplete = false;
+#endif
+
+bool rtIsMainThread()
 {
-  int    argc;
-  char **argv;
-
-  args_() { argc = 0; argv = NULL; }
-  args_(int n = 0, char** a = NULL) : argc(n), argv(a) {}
+#ifdef WIN32
+  return GetCurrentThreadId() == __rt_main_thread__;
+#else
+  return pthread_self() == __rt_main_thread__;
+#endif
 }
-args_t;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-#ifdef USE_NODESTART_EXAMPLE
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 pthread_t worker;
 
@@ -60,103 +55,16 @@ void *jsThread(void *ptr)
 {
   if(ptr)
   {
-    args_t *args = (args_t *) ptr;
+    printf("jsThread() - STARTING...\n");
 
-    node::Start(args->argc, args->argv);
+    rtNodeContext *instance = (rtNodeContext *) ptr;
+
+    instance->run_thread(instance->js_file);
   }
 
   printf("jsThread() - EXITING...\n");
 
   return NULL;
-}
-#endif
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-#ifdef USE_BASIC_EXAMPLE
-Handle<ObjectTemplate>  globaltemplate;
-Handle<Object>          processref;
-Persistent<Context>     contextref;
-#endif
-
-args_t *s_gArgs;
-
-int main(int argc, char** argv)
-{
-  args_t aa(argc, argv);
-  s_gArgs = &aa;
-
-
-#ifdef USE_BASIC_EXAMPLE
-  // Create a new Isolate and make it the current one.
-  Isolate* isolate = Isolate::New();
-  Isolate::Scope isolate_scope(isolate);
-
-  // Create a stack-allocated handle scope.
-  HandleScope handle_scope(isolate);
-
-  // Create a new context.
-  Local<Context> context = Context::New(isolate);
-
-  // Enter the context for compiling and running the hello world script.
-  Context::Scope context_scope(context);
-
-  // Create a string containing the JavaScript source code.
-  Local<String> source = String::NewFromUtf8(isolate, "'Hello' + ', World!'");
-
-  // Compile the source code.
-  Local<Script> script = Script::Compile(source);
-
-  // Run the script to get the result.
-  Local<Value> result = script->Run();
-
-  // Convert the result to an UTF8 string and print it.
-  String::Utf8Value utf8(result);
-  printf("%s\n", *utf8);
-  return 0;
-#endif
-
-#ifdef USE_NODESTART_EXAMPLE
-#if 0
-  printf("STARTING via *OTHER* THREAD... argc = %d\n", argc);
-
-  if(pthread_create(&worker, NULL, jsThread, (void *) &aa))
-  {
-    fprintf(stderr, "Error creating thread\n");
-    return 1;
-  }
-
-  getchar();
-
-#else
-
-  node::Start(argc, argv);
-
-#endif
-#else
-
-  rtNode myNode;
-
-  rtNodeContextRef ctx = myNode.createContext();
-
-  node_isolate = ctx->mIsolate; // Must come first !!
-
-  myNode.init(s_gArgs->argc, s_gArgs->argv);
-  printf("Init Done.\n");
-
-  printf("Start Run...\n");
-  ctx->run("");
-
-  printf("Run Done...\n");
-
-  printf("\n Term...");
-  myNode.term();
-  printf("Done\n");
-
-  return 0;
-#endif
-
-  return 0;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -169,13 +77,24 @@ rtNodeContext::rtNodeContext() :
   mIsolate = Isolate::New();
 
   Isolate::Scope isolate_scope(mIsolate);
-
-  // Create a stack-allocated handle scope.
-  HandleScope handle_scope(mIsolate);
+  HandleScope     handle_scope(mIsolate);
 
   // Create a new context.
   mContext.Reset(mIsolate, Context::New(mIsolate));
+
+  // Get a Local context.
+  Local<Context> local_context = node::PersistentToLocal<Context>(mIsolate, mContext);
+  Context::Scope context_scope(local_context);
+
+  Handle<Object> global = local_context->Global();
+
+  // Register wrappers.
+    rtObjectWrapper::exportPrototype(mIsolate, global);
+  rtFunctionWrapper::exportPrototype(mIsolate, global);
+
+  rtWrappers.Reset(mIsolate, global);
 }
+
 
 rtNodeContext::~rtNodeContext()
 {
@@ -184,10 +103,23 @@ rtNodeContext::~rtNodeContext()
   mIsolate->Dispose();
 }
 
+
 void rtNodeContext::addObject(std::string const& name, rtObjectRef const& obj)
 {
+  Locker                locker(mIsolate);
+  Isolate::Scope isolate_scope(mIsolate);
+  HandleScope     handle_scope(mIsolate);    // Create a stack-allocated handle scope.
 
+  // Get a Local context...
+  Local<Context> local_context = node::PersistentToLocal<Context>(mIsolate, mContext);
+  Context::Scope context_scope(local_context);
+
+  Handle<Object> global = local_context->Global();
+
+  global->Set(String::NewFromUtf8(mIsolate, name.c_str()),
+              rtObjectWrapper::createFromObjectReference(mIsolate, obj));
 }
+
 
 inline bool file_exists(const std::string& name)
 {
@@ -195,32 +127,75 @@ inline bool file_exists(const std::string& name)
   return (stat (name.c_str(), &buffer) == 0);
 }
 
+
 rtObjectRef rtNodeContext::run_file(std::string file)
 {
+  //printf("DEBUG:  %15s()    - ENTER\n", __FUNCTION__);
+
   if(file_exists(file) == false)
   {
     return rtObjectRef(0);  // ERROR
   }
 
-  std::ifstream       js_file(file.c_str());
-  std::stringstream   script;
+  startThread(file);
 
-  script << js_file.rdbuf(); // slurp up file
+  return rtObjectRef(0);// JUNK
 
-  return run(script.str());
+  //return startThread(file);
 }
 
-rtObjectRef rtNodeContext::run(std::string js)
+
+rtObjectRef rtNodeContext::run_snippet(std::string js)
 {
-  int exec_argc;
-  const char** exec_argv;
+  printf("DEBUG:  %15s()    - ENTER\n", __FUNCTION__);
 
-  printf("run() >> Initialize()...\n");
+  {//scope
 
-  V8::Initialize();
-  node_is_initialized = true;
+ //   Locker                locker(mIsolate);
+    Isolate::Scope isolate_scope(mIsolate);
+    HandleScope     handle_scope(mIsolate);    // Create a stack-allocated handle scope.
 
-  printf("run() >> Initialize()... DONE\n");
+    // Enter the context for compiling and running ... Persistent > Local
+
+    // Get a Local context...
+    Local<Context> local_context = node::PersistentToLocal<Context>(mIsolate, mContext);
+    Context::Scope context_scope(local_context);
+
+    Local<String> source = String::NewFromUtf8(mIsolate, js.c_str());
+
+    // Compile the source code.
+    Local<Script> script = Script::Compile(source);
+
+    // Run the script to get the result.
+    Local<Value> result = script->Run();
+
+    // Convert the result to an UTF8 string and print it.
+    String::Utf8Value utf8(result);
+
+    printf("\nRETURN from JS >>>   %s\n", *utf8);
+
+    return rtObjectRef(0);// JUNK
+  }//scope
+}
+
+int rtNodeContext::startThread(std::string js)
+{
+  js_file = js;
+
+  if(pthread_create(&worker, NULL, jsThread, (void *) this))
+  {
+    fprintf(stderr, "Error creating thread\n");
+    return 1;
+  }
+}
+
+
+rtObjectRef rtNodeContext::run_thread(std::string js)
+{
+  printf("DEBUG:  %15s()    - ENTER    \n", __FUNCTION__);
+
+  int exec_argc = 0;
+  const char** exec_argv = NULL;
 
   {//scope
 
@@ -228,10 +203,9 @@ rtObjectRef rtNodeContext::run(std::string js)
     Isolate::Scope isolate_scope(mIsolate);
     HandleScope     handle_scope(mIsolate);    // Create a stack-allocated handle scope.
 
-    // Enter the context for compiling and running ... Persistent > Local
-    Local<Context> local_context = Context::New(mIsolate);
+    Local<Context> local_context = node::PersistentToLocal<Context>(mIsolate, mContext);
 
-    printf("run() >> CreateEnvironment()...\n");
+    Context::Scope context_scope(local_context);
 
     Environment* env = CreateEnvironment(
           mIsolate,
@@ -242,16 +216,20 @@ rtObjectRef rtNodeContext::run(std::string js)
           exec_argc,
           exec_argv);
 
-    printf("run() >> CreateEnvironment()... DONE\n");
-
-    Context::Scope context_scope(local_context);
-
-    printf("run() >> LoadEnvironment()... \n");
-
     LoadEnvironment(env);
 
-    printf("run() >> LoadEnvironment()... DONE\n");
+    Local<String> source = String::NewFromUtf8(mIsolate, js.c_str());
 
+    // Compile the source code.
+    Local<Script> script = Script::Compile(source);
+
+    // Run the script to get the result.
+    Local<Value> result = script->Run();
+
+    // Convert the result to an UTF8 string and print it.
+    String::Utf8Value utf8(result);
+
+#if 1
     int code;
     bool more;
     do
@@ -275,9 +253,40 @@ rtObjectRef rtNodeContext::run(std::string js)
 
     code = EmitExit(env);
     RunAtExit(env);
+#endif
   }//scope
 
-  getchar();
+  return  rtObjectRef(0);
+}
+
+
+
+rtObjectRef rtNodeContext::run(std::string js)
+{
+  printf("DEBUG:  %15s()    - ENTER   %s\n", __FUNCTION__, js.c_str());
+
+  if(file_exists(js) == true)
+  {
+    printf("DEBUG:  %15s()    - ENTER\n", __FUNCTION__);
+
+    std::ifstream       js_file(js.c_str());
+    std::stringstream   script;
+
+    script << js_file.rdbuf(); // slurp up file
+
+    std::string s = script.str();
+
+    startThread(s);
+
+    return  rtObjectRef(0);
+  }
+  else
+  {
+    return run_snippet(js);
+
+//    startThread(js);
+//    return  rtObjectRef(0); // JUNK
+  }
 
   return  rtObjectRef(0);
 }
@@ -285,8 +294,7 @@ rtObjectRef rtNodeContext::run(std::string js)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-rtNode::rtNode() :
-  mPlatform(NULL), mPxNodeExtension(NULL)
+rtNode::rtNode() : mPlatform(NULL), mPxNodeExtension(NULL)
 {
 
 }
@@ -300,6 +308,9 @@ void rtNode::init(int argc, char** argv)
 
   // Hack around with the argv pointer. Used for process.title = "blah".
   argv = uv_setup_args(argc, argv);
+
+  V8::Initialize();
+  node_is_initialized = true;
 }
 
 void rtNode::term()
@@ -327,7 +338,7 @@ rtNodeContextRef rtNode::getGlobalContext() const
 
 rtNodeContextRef rtNode::createContext(bool ownThread)
 {
-  rtNodeContextRef ctxref = new rtNodeContext;
+  rtNodeContextRef ctxref = new rtNodeContext();
 
   return ctxref;
 }
