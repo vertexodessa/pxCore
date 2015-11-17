@@ -1,14 +1,15 @@
-var setLoggingLevel = require('rcvrcore/Logger').setLoggingLevel;
+var setLoggingLevel = require('./rcvrcore/Logger').setLoggingLevel;
 
 var argDefinitions = {screenWidth:{required:false, default:1280, help:"Specifies the screen width"},
-  screenHeight:{required:false, default:720, help:"Specifies the screen height"},
-  logLevel:{required:false, default:1, help:"Specifies the logging level (0-N)"},
-  url:{required:true, help:"Specifies JavaScript file to load"},
-  useNodeBasedImports:{required:false, help:"If true then imports don't need to specify file extensions"}
+                     screenHeight:{required:false, default:720,  help:"Specifies the screen height"},
+                         logLevel:{required:false, default:1,    help:"Specifies the logging level (0-N)"},
+                              url:{required:true,                help:"Specifies JavaScript file to load"},
+              useNodeBasedImports:{required:false,               help:"If true then imports don't need to specify file extensions"}
 };
 
-var argProcessor = require("rcvrcore/utils/ArgProcessor");
-var processArgs = argProcessor(process.argv, argDefinitions);
+var argProcessor = require("./rcvrcore/utils/ArgProcessor");
+//var processArgs  = argProcessor(process.argv, argDefinitions);
+var processArgs = {url:'browser.js'};
 
 if (processArgs['url']=='')
   processArgs['url'] = 'browser.js';
@@ -21,6 +22,6 @@ if( processArgs.hasOwnProperty('logLevel')) {
 var pxRoot = require('rcvrcore/pxRoot')(0, 0, processArgs['screenWidth'], processArgs['screenHeight']);
 
 
-pxRoot.addScene({url:processArgs['url'],w:processArgs['screenWidth'],h:processArgs['screenHeight'],
+pxRoot.addScene({ url:processArgs['url'],w:processArgs['screenWidth'],h:processArgs['screenHeight'],
   useNodeBasedImports:processArgs['useNodeBasedImports']});
 pxRoot.setOriginalUrl(processArgs['url']);

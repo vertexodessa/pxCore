@@ -7,11 +7,14 @@ export LD_LIBRARY_PATH=../../external/png/.libs/:../../external/jpg/.libs/:../..
 [ -f FreeSans.ttf ] || cp ../FreeSans.ttf .
 
 echo $LD_LIBRARY_PATH
+export NODE_PATH=`pwd`
 
 #../rtNode load.js $*
 
 #../rtNode start.js $*
 
-#../rtNode ../fancyp.js
+./rtNode
 
-../rtNode
+#gdb ../rtNode
+
+#valgrind --leak-check=summary  ../rtNode

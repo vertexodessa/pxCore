@@ -185,17 +185,19 @@ int main(int argc, char** argv)
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  //ctx->addObject("scene", root);
-
   global->Set(String::NewFromUtf8(ctx->mIsolate, "dispose"),
               FunctionTemplate::New(ctx->mIsolate, disposeNode)->GetFunction());
-
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 // ctx->run(" var before = 'BEFORE: myRect.x = ' + myRect.x;  myRect.x += 300; var after = '... AFTER: myRect.x = '+ myRect.x;  before + after;");
 
 // ctx->run("rtTest.js");
-  ctx->run("fancyp.js");
+//  ctx->run("fancyp.js");
+//  ctx->run("on_demand.js");
+ // ctx->run("playmask.js");
+  //  ctx->run("editor.js");
+//  ctx->run("events.js");
+  ctx->run("start.js");
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -203,8 +205,10 @@ int main(int argc, char** argv)
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+  printf("\n\nDEBUG: main() - Exiting...");
+
   myNode.term();
 
-  printf("main() - Exiting...");
+
   return 0;
 }

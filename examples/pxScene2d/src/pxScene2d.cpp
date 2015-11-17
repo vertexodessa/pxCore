@@ -355,6 +355,9 @@ rtError pxObject::animateTo(const char* prop, double to, double duration,
 // the set* method anyway.
 void pxObject::cancelAnimation(const char* prop, bool fastforward)
 {
+  if (prop == NULL)
+    return;
+
   if (!mCancelInSet)
     return;
 
@@ -429,7 +432,7 @@ void pxObject::animateTo(const char* prop, double to, double duration,
                          rtObjectRef promise)
 {
   cancelAnimation(prop, true);
-  
+
   // schedule animation
   animation a;
 
@@ -465,6 +468,11 @@ void pxObject::update(double t)
       // TODO this sort of blows since this triggers another
       // animation traversal to cancel animations
 #if 1
+      if(a.prop.isEmpty())
+      {
+        printf("\nDEBUG: cancelAnimation() >>> EMPTY");
+        exit(-1);
+      }
       cancelAnimation(a.prop, true);
 #else
       set(a.prop, a.to);

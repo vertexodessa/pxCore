@@ -1,3 +1,4 @@
+var scene = getScene()
 //scene.showOutlines = true;
 
 var text = scene.createText({text:"One\nabcdefghijklmnopqrstuvwxyz\nThree",parent:scene.root,r:30});

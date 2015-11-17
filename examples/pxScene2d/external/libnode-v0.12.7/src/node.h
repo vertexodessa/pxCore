@@ -181,7 +181,7 @@ namespace node {
 NODE_EXTERN extern bool no_deprecation;
 
 
-NODE_EXTERN extern uv_async_t dispatch_debug_messages_async;   /*MODIFIED CODE*/
+//NODE_EXTERN extern uv_async_t dispatch_debug_messages_async;   /*MODIFIED CODE*/
 NODE_EXTERN extern v8::Isolate* node_isolate;                  /*MODIFIED CODE*/
 NODE_EXTERN extern bool node_is_initialized;                   /*MODIFIED CODE*/
 
@@ -212,9 +212,9 @@ NODE_EXTERN void Init(int* argc,
 class Environment; 
 
 NODE_EXTERN int  Start(int argc, char *argv[]);                          /*MODIFIED CODE*/
-NODE_EXTERN void StartDebug(Environment* env, bool wait);                /*MODIFIED CODE*/
-NODE_EXTERN void EnableDebug(Environment* env);                          /*MODIFIED CODE*/
-NODE_EXTERN void DispatchDebugMessagesAsyncCallback(uv_async_t* handle); /*MODIFIED CODE*/
+//NODE_EXTERN void StartDebug(Environment* env, bool wait);                /*MODIFIED CODE*/
+//NODE_EXTERN void EnableDebug(Environment* env);                          /*MODIFIED CODE*/
+//NODE_EXTERN void DispatchDebugMessagesAsyncCallback(uv_async_t* handle); /*MODIFIED CODE*/
 
 NODE_EXTERN Environment* CreateEnvironment(v8::Isolate* isolate,
                                            struct uv_loop_s* loop,

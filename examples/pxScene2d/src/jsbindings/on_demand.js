@@ -1,3 +1,4 @@
+var scene = getScene()
 var root = scene.root;
 
 var fontSize = 24;

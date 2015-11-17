@@ -69,6 +69,11 @@ int rtString::compare(const char* s) const {
   u_int32_t c1, c2;
   int i1 = 0, i2 = 0;
   
+  if(s == NULL || mData == NULL)
+  {
+    return -1;
+  }
+
   do {
     c1 = u8_nextchar((char*)s, &i1);
     c2 = u8_nextchar((char*)mData, &i2);
