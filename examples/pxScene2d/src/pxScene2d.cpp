@@ -36,6 +36,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+extern void rtWrapperSceneUpdateEnter();
+extern void rtWrapperSceneUpdateExit();
+
 
 static char encoding_table[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
                                 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
@@ -1210,6 +1213,10 @@ void pxScene2d::draw()
 
 void pxScene2d::onUpdate(double t)
 {
+  if (mTop)
+  {
+    rtWrapperSceneUpdateEnter();
+  }
   pxTextureCacheObject::checkForCompletedDownloads();
   pxText::checkForCompletedDownloads();
 
@@ -1244,6 +1251,10 @@ void pxScene2d::onUpdate(double t)
 
   frameCount++;
   }
+  if (mTop)
+  {
+    rtWrapperSceneUpdateExit();
+  }
 }
 
 void pxScene2d::onDraw()
@@ -1251,11 +1262,18 @@ void pxScene2d::onDraw()
 //  printf("**** drawing \n");
 
   if (mTop)
-    context.setSize(mWidth, mHeight);  
+  {
+    rtWrapperSceneUpdateEnter();
+    context.setSize(mWidth, mHeight);
+  }  
 #if 1
     draw();
 #endif
-
+  
+  if (mTop)
+  {
+    rtWrapperSceneUpdateExit();
+  }
 }
 
 // Does not draw updates scene to time t
