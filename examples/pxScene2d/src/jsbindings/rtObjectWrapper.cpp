@@ -37,6 +37,7 @@ rtObjectWrapper::rtObjectWrapper(const rtObjectRef& ref)
 
 rtObjectWrapper::~rtObjectWrapper()
 {
+  //rtLogInfo("OBJ - delete");
 }
 
 void rtObjectWrapper::exportPrototype(Isolate* isolate, Handle<Object> exports)

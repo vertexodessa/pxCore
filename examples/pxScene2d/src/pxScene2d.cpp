@@ -30,15 +30,14 @@
 #include "pxIView.h"
 
 
-// Taken from
-// http://stackoverflow.com/questions/342409/how-do-i-base64-encode-decode-in-c
-
 #include <stdint.h>
 #include <stdlib.h>
 
 extern void rtWrapperSceneUpdateEnter();
 extern void rtWrapperSceneUpdateExit();
 
+// Taken from
+// http://stackoverflow.com/questions/342409/how-do-i-base64-encode-decode-in-c
 
 static char encoding_table[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
                                 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
@@ -358,7 +357,16 @@ rtError pxObject::animateTo(const char* prop, double to, double duration,
 // the set* method anyway.
 void pxObject::cancelAnimation(const char* prop, bool fastforward)
 {
-  if (prop == NULL)
+  if(strlen(prop) == 0)
+   {
+    printf("\n##################    EMPTY !!!");
+    printf("\n##################    EMPTY !!!");
+    printf("\n##################    EMPTY !!!");
+    printf("\n##################    EMPTY !!!");
+  }
+
+  if (prop == NULL || strlen(prop) == 0)
+//  if (prop == NULL)
     return;
 
   if (!mCancelInSet)
@@ -471,11 +479,6 @@ void pxObject::update(double t)
       // TODO this sort of blows since this triggers another
       // animation traversal to cancel animations
 #if 1
-      if(a.prop.isEmpty())
-      {
-        printf("\nDEBUG: cancelAnimation() >>> EMPTY");
-        exit(-1);
-      }
       cancelAnimation(a.prop, true);
 #else
       set(a.prop, a.to);
@@ -506,6 +509,7 @@ void pxObject::update(double t)
     if (a.cancelled)
     {
       it = mAnimations.erase(it);
+
       continue;
     }
     
@@ -1082,6 +1086,7 @@ rtError pxScene2d::createObject(rtObjectRef p, rtObjectRef& o)
   o = new pxObject(this);
   o.set(p);
   o.send("init");
+
   return RT_OK;
 }
 
@@ -1090,6 +1095,7 @@ rtError pxScene2d::createRectangle(rtObjectRef p, rtObjectRef& o)
   o = new pxRectangle(this);
   o.set(p);
   o.send("init");
+
   return RT_OK;
 }
 
@@ -1098,6 +1104,7 @@ rtError pxScene2d::createText(rtObjectRef p, rtObjectRef& o)
   o = new pxText(this);
   o.set(p);
   o.send("init");
+
   return RT_OK;
 }
 
@@ -1106,6 +1113,7 @@ rtError pxScene2d::createText2(rtObjectRef p, rtObjectRef& o)
   o = new pxText2(this);
   o.set(p);
   o.send("init");
+
   return RT_OK;
 }
 
@@ -1114,6 +1122,7 @@ rtError pxScene2d::createImage(rtObjectRef p, rtObjectRef& o)
   o = new pxImage(this);
   o.set(p);
   o.send("init");
+
   return RT_OK;
 }
 
@@ -1122,6 +1131,7 @@ rtError pxScene2d::createImage9(rtObjectRef p, rtObjectRef& o)
   o = new pxImage9(this);
   o.set(p);
   o.send("init");
+
   return RT_OK;
 }
 
@@ -1130,6 +1140,7 @@ rtError pxScene2d::createScene(rtObjectRef p, rtObjectRef& o)
   o = new pxSceneContainer(this);
   o.set(p);
   o.send("init");
+
   return RT_OK;
 }
 
@@ -1140,6 +1151,7 @@ rtError pxScene2d::createExternal(rtObjectRef p, rtObjectRef& o)
   o = c.getPtr();
   o.set(p);
   o.send("init");
+
   return RT_OK;
 }
 
@@ -1217,6 +1229,7 @@ void pxScene2d::onUpdate(double t)
   {
     rtWrapperSceneUpdateEnter();
   }
+
   pxTextureCacheObject::checkForCompletedDownloads();
   pxText::checkForCompletedDownloads();
 
@@ -1224,6 +1237,7 @@ void pxScene2d::onUpdate(double t)
     start = pxSeconds();
 
   update(t);
+
   if (mDirty)
   {
     mDirty = false;
@@ -1233,23 +1247,25 @@ void pxScene2d::onUpdate(double t)
   // TODO get rid of mTop somehow
   if (mTop)
   {
-  if (frameCount >= 60)
-  {
-    end2 = pxSeconds();
+    if (frameCount >= 60)
+    {
+      end2 = pxSeconds();
 
-    double fps = (double)frameCount/(end2-start);
-    printf("%f fps\n", fps);
-    // TODO FUTURES... might be nice to have "struct" style object's that get copied
-    // at the interop layer so we don't get remoted calls back to the render thread
-    // for accessing the values (events would be the primary usecase)
-    rtObjectRef e = new rtMapObject;
-    e.set("fps", fps);
-    mEmit.send("onFPS", e);
-    start = end2;
-    frameCount = 0;
-  }
+      double fps = (double)frameCount/(end2-start);
+      printf("%f fps\n", fps);
+      // TODO FUTURES... might be nice to have "struct" style object's that get copied
+      // at the interop layer so we don't get remoted calls back to the render thread
+      // for accessing the values (events would be the primary usecase)
+      rtObjectRef e = new rtMapObject;
+      e.set("fps", fps);
 
-  frameCount++;
+      mEmit.send("onFPS", e);
+
+      start = end2;
+      frameCount = 0;
+    }
+
+    frameCount++;
   }
   if (mTop)
   {
@@ -1266,8 +1282,9 @@ void pxScene2d::onDraw()
     rtWrapperSceneUpdateEnter();
     context.setSize(mWidth, mHeight);
   }  
+
 #if 1
-    draw();
+  draw();
 #endif
   
   if (mTop)
@@ -1306,6 +1323,7 @@ void pxScene2d::onSize(int32_t w, int32_t h)
   e.set("name", "onResize");
   e.set("w", w);
   e.set("h", h);
+
   mEmit.send("onResize", e);
 }
 
@@ -1436,7 +1454,6 @@ void pxScene2d::setMouseEntered(pxObject* o)
 }
 rtError pxScene2d::setFocus(rtObjectRef o)
 {
-
   if(mFocus) {
 	    rtObjectRef e = new rtMapObject;
 	    e.set("target",mFocus);
@@ -1479,15 +1496,14 @@ void pxScene2d::onFocus()
   rtObjectRef e = new rtMapObject;
   e.set("name", "onFocus");
   mEmit.send("onFocus", e);
-
 }
+
 void pxScene2d::onBlur()
 {
   // top level scene event
   rtObjectRef e = new rtMapObject;
   e.set("name", "onBlur");
   mEmit.send("onBlur", e);
-
 }
 
 void pxScene2d::bubbleEvent(rtObjectRef e, rtRefT<pxObject> t, 
@@ -1750,7 +1766,6 @@ rtError pxScene2d::screenshot(rtString type, rtString& pngData)
     return RT_FAIL;
 }
 
-
 rtDefineObject(pxScene2d, rtObject);
 rtDefineProperty(pxScene2d, root);
 rtDefineProperty(pxScene2d, onScene);
@@ -1914,3 +1929,5 @@ rtError createObject2(const char* t, rtObjectRef& o)
   return gObjectFactory(gObjectFactoryContext, t, o);
 }
 #endif
+
+

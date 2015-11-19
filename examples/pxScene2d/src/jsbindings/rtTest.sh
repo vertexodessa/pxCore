@@ -13,8 +13,9 @@ export NODE_PATH=`pwd`
 
 #../rtNode start.js $*
 
-./rtNode
+ulimit -s unlimited
+#../rtNode
 
-#gdb ../rtNode
+gdb ../rtNode
 
 #valgrind --leak-check=summary  ../rtNode

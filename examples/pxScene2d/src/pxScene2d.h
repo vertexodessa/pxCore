@@ -927,6 +927,10 @@ public:
 
   void init();
 
+//  bool updateHasLock();
+//  void updateEnter();
+//  void updateExit();
+
   rtError onScene(rtFunctionRef& v) const;
   rtError setOnScene(rtFunctionRef v);
 

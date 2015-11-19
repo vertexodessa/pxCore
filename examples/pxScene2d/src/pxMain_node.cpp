@@ -192,12 +192,12 @@ int main(int argc, char** argv)
 // ctx->run(" var before = 'BEFORE: myRect.x = ' + myRect.x;  myRect.x += 300; var after = '... AFTER: myRect.x = '+ myRect.x;  before + after;");
 
 // ctx->run("rtTest.js");
-//  ctx->run("fancyp.js");
+  ctx->run("fancyp.js");
 //  ctx->run("on_demand.js");
  // ctx->run("playmask.js");
   //  ctx->run("editor.js");
 //  ctx->run("events.js");
-  ctx->run("start.js");
+ // ctx->run("start.js");
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

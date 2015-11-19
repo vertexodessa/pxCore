@@ -36,6 +36,9 @@ rtString::rtString(const rtString& s): mData(0) {
 rtString& rtString::operator=(const rtString& s) {
   if (s.mData) // Aliases
     mData = strdup(s.mData);
+  else
+    mData = 0;
+
   return *this;
 }
 
@@ -59,10 +62,17 @@ void rtString::term() {
 }
 
 void rtString::append(const char* s) {
+
+  if(s==NULL)
+  {
+    return;
+  }
+
   int sl = strlen(s);
   int dl = strlen(mData);
   mData = (char*)realloc((void*)mData, dl+sl+1);
-    strcpy(mData+dl, s);
+
+  strcpy(mData+dl, s);
 }
 
 int rtString::compare(const char* s) const {
@@ -71,6 +81,14 @@ int rtString::compare(const char* s) const {
   
   if(s == NULL || mData == NULL)
   {
+    printf("\n#############################  (%p) compare() is BAD   s: 0x%p     mData: 0x%p",this, s, mData);
+    printf("\n#############################  (%p) compare() is BAD   s: 0x%p     mData: 0x%p",this, s, mData);
+    printf("\n#############################  (%p) compare() is BAD   s: 0x%p     mData: 0x%p",this, s, mData);
+    printf("\n#############################  (%p) compare() is BAD   s: 0x%p     mData: 0x%p",this, s, mData);
+    printf("\n#############################  (%p) compare() is BAD   s: 0x%p     mData: 0x%p",this, s, mData);
+    printf("\n#############################  (%p) compare() is BAD   s: 0x%p     mData: 0x%p",this, s, mData);
+    printf("\n#############################  (%p) compare() is BAD   s: 0x%p     mData: 0x%p",this, s, mData);
+
     return -1;
   }
 
