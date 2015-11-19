@@ -693,6 +693,7 @@ rtError pxText2::measureText(rtObjectRef& o) {
   
 	return RT_OK;
 }
+
 // pxTextMetrics
 rtDefineObject(pxTextMetrics, pxObject);
 rtDefineProperty(pxTextMetrics, height); 
