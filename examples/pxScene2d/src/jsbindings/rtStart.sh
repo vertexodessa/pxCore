@@ -20,9 +20,6 @@ echo $LD_LIBRARY_PATH
 
 export NODE_PATH=$NODE_PATH:`pwd`
 
-echo  NODE_PATH
-echo $NODE_PATH
-
 ../rtNode
 
 ##gdb --args ../rtNode start.js url=$*

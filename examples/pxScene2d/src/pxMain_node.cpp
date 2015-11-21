@@ -165,13 +165,11 @@ int main(int argc, char** argv)
   if(argc >= 2)
   {
 //    printf("\n\n#### Running USER JavaScript... [ %s ]\n", argv[1]);
-//    ctx->run("start.js");
     ctx->run(argv[1]);
   }
   else // Default to ...
   {
-//    printf("\n\n#### Running DEFAULT JavaScript...\n");
-
+    //printf("\n\n#### Running DEFAULT JavaScript...\n");
     ctx->run("start.js");
   }
 

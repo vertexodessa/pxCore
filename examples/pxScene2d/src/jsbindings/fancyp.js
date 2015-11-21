@@ -23,7 +23,7 @@ function fancy(o) {
   // animate x and restart the overall animation at end
   o.x = startX;
   o.animateTo({x:50}, 1.0, scene.PX_LINEAR, scene.PX_END)
-    .then(function(o){ console.log("start X");
+    .then(function(o){
       return o.animateTo({x:startX},3.0,scene.PX_EASEOUTELASTIC,
                           scene.PX_END)})
     .then(function(){console.log("restart");fancy(o);});

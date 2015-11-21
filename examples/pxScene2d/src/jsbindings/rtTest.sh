@@ -7,7 +7,7 @@ export LD_LIBRARY_PATH=../../external/png/.libs/:../../external/jpg/.libs/:../..
 [ -f FreeSans.ttf ] || cp ../FreeSans.ttf .
 
 echo $LD_LIBRARY_PATH
-export NODE_PATH=`pwd`
+export NODE_PATH=../:`pwd`
 
 #export NODE_DEBUG=/usr/lib/node_modules
 
@@ -17,8 +17,11 @@ export NODE_PATH=`pwd`
 
 #ulimit -s unlimited
 
+echo
+echo NOTE: Please use 'rtStart.sh' ... !!
+echo
 
-./rtNode $1
+#../rtNode $1
 
 #name=$1
 
