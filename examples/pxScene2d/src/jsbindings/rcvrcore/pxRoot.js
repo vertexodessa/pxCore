@@ -1,6 +1,6 @@
 "use strict";
 
-//var px = require("px");
+var px = require("px");
 var fs = require("fs");
 var AppSceneContext = require('rcvrcore/AppSceneContext');
 
@@ -40,7 +40,7 @@ function pxRoot(baseUri) {
 }
 
 pxRoot.prototype.initialize = function(x, y, width, height) {
-  this.rootScene =/* px.*/getScene(x, y, width, height);
+  this.rootScene =/*px.*/getScene(x, y, width, height);
 
   this.rootScene.root.on('onPreKeyDown', function (e) {
     log.message(2, "PxRoot: got pre-key " + e.keyCode);

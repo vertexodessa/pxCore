@@ -1,4 +1,4 @@
-var setLoggingLevel = require('./rcvrcore/Logger').setLoggingLevel;
+var setLoggingLevel = require('rcvrcore/Logger').setLoggingLevel;
 
 var argDefinitions = {screenWidth:{required:false, default:1280, help:"Specifies the screen width"},
                      screenHeight:{required:false, default:720,  help:"Specifies the screen height"},
@@ -7,7 +7,7 @@ var argDefinitions = {screenWidth:{required:false, default:1280, help:"Specifies
               useNodeBasedImports:{required:false,               help:"If true then imports don't need to specify file extensions"}
 };
 
-var argProcessor = require("./rcvrcore/utils/ArgProcessor");
+var argProcessor = require("rcvrcore/utils/ArgProcessor");
 //var processArgs  = argProcessor(process.argv, argDefinitions);
 var processArgs = {url:'browser.js'};
 

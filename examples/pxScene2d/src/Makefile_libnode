@@ -95,7 +95,7 @@ LDNODEV8 = -L$(NODEDIR)/out/Debug
 
 LDEXT   = $(LDPNG) $(LDJPG) $(LDFT) $(LDCURL) $(LDNODE) $(LDNODEV8)
 
-LDFLAGS = -L$(PXLIBS) -lpxCore -pthread -lglut -lGLEW -lGL $(LDEXT) -ldl -lrt -lnode -lv8_libplatform
+LDFLAGS = -L$(PXLIBS) -lnode -lpxCore -pthread -lglut -lGLEW -lGL $(LDEXT) -ldl -lrt -lv8_libplatform
 
 
 OBJDIR=obj

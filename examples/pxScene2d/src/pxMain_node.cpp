@@ -17,7 +17,6 @@
 #include "jsbindings/rtObjectWrapper.h"
 #include "jsbindings/rtFunctionWrapper.h"
 
-
 #include "node.h"
 #include "node_javascript.h"
 
@@ -72,8 +71,6 @@ void setupScene(const FunctionCallbackInfo<Value>& args)
 
 static void getScene(const FunctionCallbackInfo<Value>& args)
 {
-  printf("DEBUG:  getScene() ... ENTER \n");
-
   setupScene(args);
 }
 
@@ -81,7 +78,7 @@ static void getScene(const FunctionCallbackInfo<Value>& args)
 
 static void disposeNode(const FunctionCallbackInfo<Value>& args)
 {
-  printf("DEBUG:  disposeNode() ... ENTER \n");
+//  printf("DEBUG:  disposeNode() ... ENTER \n");
 
   if (args.Length() < 1)
     return;
@@ -135,37 +132,7 @@ int main(int argc, char** argv)
 
   scene->init();
 
-#if 0
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  //
-  // Add RECTANGLE to SCENE
-  //
-  rtObjectRef p;
-
-  scene.sendReturns<rtObjectRef>("createRectangle", p);
-
-  rtObjectRef root = scene.get<rtObjectRef>("root");
-
-  p.set("x", 21);
-  p.set("y", 20);
-  p.set("w", 300);
-  p.set("h", 30);
-  p.set("fillColor",0xfeff00ff);
-  p.set("lineColor",0xffffff80);
-  p.set("lineWidth", 10);
-  p.set("parent", root);
-
- // p.send("animateTo", "h", 600, 0.5, 0, 0);
-
-// ctx->addObject("scene", scene);
-   ctx->addObject("myRect", p);
-
-
-#endif
-
-  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
- // Persistent<Object> javaScene;
 
   Isolate::Scope isolate_scope(ctx->mIsolate);
   HandleScope     handle_scope(ctx->mIsolate);    // Create a stack-allocated handle scope.
@@ -187,17 +154,26 @@ int main(int argc, char** argv)
 
   global->Set(String::NewFromUtf8(ctx->mIsolate, "dispose"),
               FunctionTemplate::New(ctx->mIsolate, disposeNode)->GetFunction());
+
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-// ctx->run(" var before = 'BEFORE: myRect.x = ' + myRect.x;  myRect.x += 300; var after = '... AFTER: myRect.x = '+ myRect.x;  before + after;");
+  global->Set(String::NewFromUtf8(ctx->mIsolate, "px"),
+              String::NewFromUtf8(ctx->mIsolate, "dummy value"));
 
-// ctx->run("rtTest.js");
-  ctx->run("fancyp.js");
-//  ctx->run("on_demand.js");
- // ctx->run("playmask.js");
-  //  ctx->run("editor.js");
-//  ctx->run("events.js");
- // ctx->run("start.js");
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+  if(argc >= 2)
+  {
+//    printf("\n\n#### Running USER JavaScript... [ %s ]\n", argv[1]);
+//    ctx->run("start.js");
+    ctx->run(argv[1]);
+  }
+  else // Default to ...
+  {
+//    printf("\n\n#### Running DEFAULT JavaScript...\n");
+
+    ctx->run("start.js");
+  }
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -205,10 +181,7 @@ int main(int argc, char** argv)
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  printf("\n\nDEBUG: main() - Exiting...");
-
   myNode.term();
-
 
   return 0;
 }

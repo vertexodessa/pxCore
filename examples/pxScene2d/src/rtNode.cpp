@@ -55,8 +55,6 @@ void *jsThread(void *ptr)
 {
   if(ptr)
   {
-    printf("jsThread() - STARTING...\n");
-
     rtNodeContext *instance = (rtNodeContext *) ptr;
 
     instance->run_thread(instance->js_file);
@@ -147,8 +145,6 @@ rtObjectRef rtNodeContext::run_file(std::string file)
 
 rtObjectRef rtNodeContext::run_snippet(std::string js)
 {
-  printf("DEBUG:  %15s()    - ENTER\n", __FUNCTION__);
-
   {//scope
 
  //   Locker                locker(mIsolate);
@@ -172,8 +168,6 @@ rtObjectRef rtNodeContext::run_snippet(std::string js)
     // Convert the result to an UTF8 string and print it.
     String::Utf8Value utf8(result);
 
-    printf("\nRETURN from JS >>>   %s\n", *utf8);
-
     return rtObjectRef(0);// JUNK
   }//scope
 }
@@ -192,8 +186,6 @@ int rtNodeContext::startThread(std::string js)
 
 rtObjectRef rtNodeContext::run_thread(std::string js)
 {
-  printf("DEBUG:  %15s()    - ENTER    \n", __FUNCTION__);
-
   int exec_argc = 0;
   const char** exec_argv = NULL;
 
@@ -229,7 +221,6 @@ rtObjectRef rtNodeContext::run_thread(std::string js)
     // Convert the result to an UTF8 string and print it.
     String::Utf8Value utf8(result);
 
-#if 1
     int code;
     bool more;
     do
@@ -253,7 +244,7 @@ rtObjectRef rtNodeContext::run_thread(std::string js)
 
     code = EmitExit(env);
     RunAtExit(env);
-#endif
+
   }//scope
 
   return  rtObjectRef(0);
@@ -263,11 +254,9 @@ rtObjectRef rtNodeContext::run_thread(std::string js)
 
 rtObjectRef rtNodeContext::run(std::string js)
 {
-  printf("DEBUG:  %15s()    - ENTER   %s\n", __FUNCTION__, js.c_str());
-
-  if(file_exists(js) == true)
+  if(true) //file_exists(js) == true)
   {
-    printf("DEBUG:  %15s()    - ENTER\n", __FUNCTION__);
+//    printf("DEBUG:  %15s()    - EXISTS !!   [%s] \n", __FUNCTION__, js.c_str());
 
     std::ifstream       js_file(js.c_str());
     std::stringstream   script;
@@ -283,9 +272,6 @@ rtObjectRef rtNodeContext::run(std::string js)
   else
   {
     return run_snippet(js);
-
-//    startThread(js);
-//    return  rtObjectRef(0); // JUNK
   }
 
   return  rtObjectRef(0);
