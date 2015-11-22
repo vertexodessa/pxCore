@@ -1,6 +1,6 @@
 "use strict";
 
-var px = require("px");
+//var px = require("px");
 var fs = require("fs");
 var AppSceneContext = require('rcvrcore/AppSceneContext');
 
@@ -203,7 +203,7 @@ pxRoot.prototype.setOriginalUrl = function(origUrl) {
 
 module.exports = function(x, y, width, height) {
   pxroot = new pxRoot();
-  pxroot.initialize(x, y, width, height);
+    pxroot.initialize(x, y, width, height);
   return pxroot;
 };
 

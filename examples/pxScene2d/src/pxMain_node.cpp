@@ -157,8 +157,8 @@ int main(int argc, char** argv)
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  global->Set(String::NewFromUtf8(ctx->mIsolate, "px"),
-              String::NewFromUtf8(ctx->mIsolate, "dummy value"));
+//  global->Set(String::NewFromUtf8(ctx->mIsolate, "px"),
+//              String::NewFromUtf8(ctx->mIsolate, "dummy value"));
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -169,7 +169,7 @@ int main(int argc, char** argv)
   }
   else // Default to ...
   {
-    //printf("\n\n#### Running DEFAULT JavaScript...\n");
+//    printf("\n\n#### Running DEFAULT JavaScript...\n");
     ctx->run("start.js");
   }
 

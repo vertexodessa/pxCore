@@ -15,12 +15,16 @@ export NODE_PATH=./:$jsbindingsDir/build/Debug:./node_modules
 [ -f FontdinerSwanky.ttf ] || cp $pxSceneDir/src/FontdinerSwanky.ttf .
 [ -f FreeSans.ttf ] || cp $pxSceneDir/src/FreeSans.ttf .
 
-echo  LD_LIBRARY_PATH
-echo $LD_LIBRARY_PATH
-
 export NODE_PATH=$NODE_PATH:`pwd`
 
 ../rtNode $1
+
+#if [ "$#" -ne 1 ]; then
+#echo here....
+#   ../rtNode "./browser.js"
+#else
+#   ../rtNode $1
+#fi
 
 ##gdb --args ../rtNode start.js url=$*
 #node start.js url=$*
