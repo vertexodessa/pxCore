@@ -10,21 +10,20 @@ echo "\n"
 
 export DYLD_LIBRARY_PATH=$pxSceneDir/external/png/.libs/:$pxSceneDir/external/curl/lib/.libs/:$pxSceneDir/external/ft/objs/.libs/
 export LD_LIBRARY_PATH=$pxSceneDir/external/png/.libs/:$pxSceneDir/external/jpg/.libs/:$pxSceneDir/external/curl/lib/.libs/:../../external/libnode/out/Release/obj.target
-export NODE_PATH=./:$jsbindingsDir/build/Debug:./node_modules
 
 [ -f FontdinerSwanky.ttf ] || cp $pxSceneDir/src/FontdinerSwanky.ttf .
 [ -f FreeSans.ttf ] || cp $pxSceneDir/src/FreeSans.ttf .
 
 export NODE_PATH=$NODE_PATH:`pwd`
 
-../rtNode $1
+#../rtNode $1
 
-#if [ "$#" -ne 1 ]; then
-#echo here....
-#   ../rtNode "./browser.js"
-#else
-#   ../rtNode $1
-#fi
+if [ "$#" -ne 1 ]; then
+echo here....
+   ../rtNode "./start.js"
+else
+   ../rtNode $1
+fi
 
 ##gdb --args ../rtNode start.js url=$*
 #node start.js url=$*

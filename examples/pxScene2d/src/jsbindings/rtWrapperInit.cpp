@@ -399,4 +399,4 @@ static void* processEventLoop(void* argp)
 }
 #endif
 
-NODE_MODULE_CONTEXT_AWARE(px, ModuleInit);
+//NODE_MODULE_CONTEXT_AWARE(px, ModuleInit);

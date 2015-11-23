@@ -23,8 +23,6 @@ RT_SRCS=\
     rtThreadTask.cpp \
     rtWrapperUtils.cpp \
     utf8.c
-    #
-    #    rtLibrary.cpp \
 
 PX_SRCS=\
     pxScene2d.cpp \
@@ -38,22 +36,6 @@ PX_SRCS=\
     pxTextureCacheObject.cpp \
     pxFileDownloader.cpp \
     pxInterpolators.cpp
-
-#    pxContextGL.cpp \
-#    pxImage.cpp \
-#    pxImage9.cpp \
-#    pxScene2d.cpp \
-#    pxRectangle.cpp \
-#    pxText.cpp \
-#    pxText2.cpp \
-#    pxUtil.cpp \
-#    pxInterpolators.cpp \
-#    pxFileDownloader.cpp \
-#    pxTextureCacheObject.cpp \
-#    pxMatrix4T.cpp \
-#    pxTransform.cpp \
-#    pxMain.cpp \
-#    pxNode.cpp
 
 EXTDIR=../external
 PXCOREDIR=../../../
@@ -89,8 +71,6 @@ LDCURL   = -L$(EXTDIR)/curl/lib/.libs -lcurl
 LDNODE   = -L$(NODEDIR)/out/Debug/obj.target
 LDNODEV8 = -L$(NODEDIR)/out/Debug
 
-#LDNODE   = -L$(NODEDIR)/out/Release/obj.target
-#LDNODEV8 = -L$(NODEDIR)/out/Release
 
 LDEXT   = $(LDPNG) $(LDJPG) $(LDFT) $(LDCURL) $(LDNODE) $(LDNODEV8)
 
@@ -131,24 +111,6 @@ $(OBJDIR)/%.o : %.cpp
 $(OBJDIR)/%.o : %.c
 	@[ -d $(OBJDIR) ] || mkdir -p $(OBJDIR)
 	$(CC) -c $(CXXFLAGS) $< -o $@
-
-MORE=\
-   jsCallback.o \
-   rtWrapperUtils.o \
-   rtFunctionWrapper.o \
-   rtObjectWrapper.o
-#   rtMutexNative.o
-#   rtThreadPoolNative.o
-#   utf8.o
-
-#MOREDIR=\
-#   $(OBJDIR)/jsCallback.o \
-#   $(OBJDIR)/rtWrapperUtils.o \
-#   $(OBJDIR)/rtFunctionWrapper.o \
-#   $(OBJDIR)/rtObjectWrapper.o
-#   $(OBJDIR)/rtMutexNative.o
-#   $(OBJDIR)/rtThreadPoolNative.o
-#   $(OBJDIR)/utf8.o
 
 
 rtNode: $(OBJS)

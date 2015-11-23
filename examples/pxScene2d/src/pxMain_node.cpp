@@ -62,16 +62,11 @@ static testWindow win;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void setupScene(const FunctionCallbackInfo<Value>& args)
+static void getScene(const FunctionCallbackInfo<Value>& args)
 {
   EscapableHandleScope scope(args.GetIsolate());
 
   args.GetReturnValue().Set(scope.Escape(win.scene(args.GetIsolate())));
-}
-
-static void getScene(const FunctionCallbackInfo<Value>& args)
-{
-  setupScene(args);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -99,7 +94,7 @@ args_t *s_gArgs;
 
 int main(int argc, char** argv)
 {
-  args_t aa(argc, argv);
+  args_t aa(/* argc */ 1, argv);   // HACK ... not aure why 'node' chokes on args of "rtNode start.js"
   s_gArgs = &aa;
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -157,21 +152,21 @@ int main(int argc, char** argv)
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-//  global->Set(String::NewFromUtf8(ctx->mIsolate, "px"),
-//              String::NewFromUtf8(ctx->mIsolate, "dummy value"));
-
-  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-  if(argc >= 2)
+  if( argc > 0)
   {
-//    printf("\n\n#### Running USER JavaScript... [ %s ]\n", argv[1]);
     ctx->run(argv[1]);
   }
-  else // Default to ...
-  {
+
+//  if(argc >= 2)
+//  {
+//    printf("\n\n#### Running USER JavaScript... [ %s ] \n", argv[1]);
+//    ctx->run(argv[1]);
+//  }
+//  else // Default to ...
+//  {
 //    printf("\n\n#### Running DEFAULT JavaScript...\n");
-    ctx->run("start.js");
-  }
+//    ctx->run("start.js");
+//  }
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
