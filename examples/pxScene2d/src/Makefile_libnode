@@ -23,7 +23,6 @@ RT_SRCS=\
     rtThreadTask.cpp \
     rtWrapperUtils.cpp \
     utf8.c
-    #    rtWrapperInit.cpp \
     #
     #    rtLibrary.cpp \
 
@@ -106,9 +105,6 @@ rtMutexNative.o: linux/rtMutexNative.cpp
 rtThreadPoolNative.o: linux/rtThreadPoolNative.cpp
 	g++ -o $(OBJDIR)/rtThreadPoolNative.o -Wall $(CXXFLAGS) -c linux/rtThreadPoolNative.cpp
 
-$(OBJDIR)/rtWrapperInit.o: jsbindings/rtWrapperInit.cpp
-	g++ -o $(OBJDIR)/rtWrapperInit.o -Wall $(CXXFLAGS) -c jsbindings/rtWrapperInit.cpp
-
 $(OBJDIR)/rtWrapperUtils.o: jsbindings/rtWrapperUtils.cpp
 	g++ -o $(OBJDIR)/rtWrapperUtils.o -Wall $(CXXFLAGS) -c jsbindings/rtWrapperUtils.cpp
 
@@ -138,7 +134,6 @@ $(OBJDIR)/%.o : %.c
 
 MORE=\
    jsCallback.o \
-   rtWrapperInit.o \
    rtWrapperUtils.o \
    rtFunctionWrapper.o \
    rtObjectWrapper.o
@@ -148,7 +143,6 @@ MORE=\
 
 #MOREDIR=\
 #   $(OBJDIR)/jsCallback.o \
-#   $(OBJDIR)/rtWrapperInit.o \
 #   $(OBJDIR)/rtWrapperUtils.o \
 #   $(OBJDIR)/rtFunctionWrapper.o \
 #   $(OBJDIR)/rtObjectWrapper.o
