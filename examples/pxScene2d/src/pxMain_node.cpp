@@ -25,14 +25,10 @@ using namespace v8;
 using namespace node;
 
 
-//namespace node
-//{
-//extern bool use_debug_agent;
-//extern bool debug_wait_connect;
-//}
 
-static void getScene(   const FunctionCallbackInfo<Value>& args); //fwd
-static void disposeNode(const FunctionCallbackInfo<Value>& args); //fwd
+rtError getScene(int numArgs, const rtValue* args, rtValue* result, void* ctx); // fwd
+
+//static void disposeNode(const FunctionCallbackInfo<Value>& args); //fwd
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -42,35 +38,12 @@ class testWindow: public pxViewWindow
 {
 public:
 
-  Local<Object> scene(Isolate* isolate) const
-  {
-    return node::PersistentToLocal(isolate, mJavaScene);
-  }
-
   void setScene(rtNodeContextRef ctx, pxScene2dRef s)
   {
-    Isolate::Scope isolate_scope(ctx->mIsolate);
-    HandleScope     handle_scope(ctx->mIsolate);    // Create a stack-allocated handle scope.
-
-    // Get a Local context...
-    Local<Context> local_context = node::PersistentToLocal<Context>(ctx->mIsolate, ctx->mContext );
-    Context::Scope context_scope(local_context);
-
-    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-    Handle<Object>  global = local_context->Global();
-
-    global->Set(String::NewFromUtf8(ctx->mIsolate, "getScene"),
-                FunctionTemplate::New(ctx->mIsolate, getScene)->GetFunction());
-
-    global->Set(String::NewFromUtf8(ctx->mIsolate, "dispose"),
-                FunctionTemplate::New(ctx->mIsolate, disposeNode)->GetFunction());
-
-    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    rtValue v = new rtFunctionCallback(getScene, s.getPtr());
+    ctx->add("getScene", v);
 
     mScene = s;
-
-    mJavaScene.Reset(ctx->mIsolate, rtObjectWrapper::createFromObjectReference(ctx->mIsolate, mScene.getPtr()));
   }
 
   void onCloseRequest()
@@ -81,7 +54,6 @@ public:
   }
 private:
 
-  Persistent<Object>  mJavaScene;
   pxScene2dRef        mScene;
 };
 
@@ -91,29 +63,37 @@ static testWindow win;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void getScene(const FunctionCallbackInfo<Value>& args)
+rtError getScene(int numArgs, const rtValue* args, rtValue* result, void* ctx)
 {
-  EscapableHandleScope scope(args.GetIsolate());
+  // We don't use the arguments so just return the scene object referece
 
-  args.GetReturnValue().Set(scope.Escape(win.scene(args.GetIsolate())));
+  if (result)
+  {
+    pxScene2dRef s = (pxScene2d*)ctx;
+    *result = s; // return the scene reference
+  }
+
+  return RT_OK;
 }
 
-static void disposeNode(const FunctionCallbackInfo<Value>& args)
-{
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//static void disposeNode(const FunctionCallbackInfo<Value>& args)
+//{
 //  printf("DEBUG:  disposeNode() ... ENTER \n");
+//
+//  if (args.Length() < 1)
+//    return;
+//
+//  if (!args[0]->IsObject())
+//    return;
+//
+//  Local<Object> obj = args[0]->ToObject();
 
-  if (args.Length() < 1)
-    return;
-
-  if (!args[0]->IsObject())
-    return;
-
-  Local<Object> obj = args[0]->ToObject();
-
-  rtObjectWrapper* wrapper = static_cast<rtObjectWrapper *>(obj->GetAlignedPointerFromInternalField(0));
-  if (wrapper)
-    wrapper->dispose();
-}
+//  rtObjectWrapper* wrapper = static_cast<rtObjectWrapper *>(obj->GetAlignedPointerFromInternalField(0));
+//  if (wrapper)
+//    wrapper->dispose();
+//}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -121,13 +101,10 @@ args_t *s_gArgs;
 
 int main(int argc, char** argv)
 {
-//  args_t aa(/*argc*/ 1, argv);   // HACK ... not aure why 'node' chokes on args of "rtNode start.js"
+//  args_t aa(/*argc*/ 1, argv);   // HACK ... not sure why 'node' chokes on args of "rtNode start.js"
 
   args_t aa(argc, argv);
   s_gArgs = &aa;
-
-//  s_gArgs->argc = 1;
-//  s_gArgs->argv = NULL;
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   //
@@ -163,6 +140,10 @@ int main(int argc, char** argv)
   //
   // RUN !
   //
+
+  rtValue junk("Hello from add() World!");
+  ctx->add("junk", junk);
+
   ctx->runScript("1+2");
   ctx->runScript("2+3");
   ctx->runScript("3+4");

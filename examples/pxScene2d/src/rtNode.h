@@ -4,6 +4,7 @@
 
 #include "rtRefT.h"
 #include "rtObject.h"
+#include "rtValue.h"
 
 #include "uv.h"
 #include "include/v8.h"
@@ -43,7 +44,7 @@ public:
 
   //  rtStringRef <<< as an OUT parameter
   //
-  void addObject(const char *name, rtObjectRef const& obj);
+  void add(const char *name, rtValue  const& val);
 
   rtObjectRef runThread(const char *js);
 

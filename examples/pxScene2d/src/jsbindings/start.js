@@ -1,3 +1,5 @@
+console.log("\nFrom start.js ... " + junk + "\n");
+
 var setLoggingLevel = require('rcvrcore/Logger').setLoggingLevel;
 
 var argDefinitions = {screenWidth:{required:false, default:1280, help:"Specifies the screen width"},

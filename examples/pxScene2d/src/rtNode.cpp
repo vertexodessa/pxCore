@@ -144,9 +144,8 @@ rtNodeContext::~rtNodeContext()
 }
 
 
-void rtNodeContext::addObject(const char *name, rtObjectRef const& obj)
+void rtNodeContext::add(const char *name, rtValue const& val)
 {
-  Locker                locker(mIsolate);
   Isolate::Scope isolate_scope(mIsolate);
   HandleScope     handle_scope(mIsolate);    // Create a stack-allocated handle scope.
 
@@ -156,8 +155,10 @@ void rtNodeContext::addObject(const char *name, rtObjectRef const& obj)
 
   Handle<Object> global = local_context->Global();
 
-  global->Set(String::NewFromUtf8(mIsolate, name),
-              rtObjectWrapper::createFromObjectReference(mIsolate, obj));
+  global->Set(String::NewFromUtf8(mIsolate, name), rt2js(mIsolate, val));
+
+//  global->Set(String::NewFromUtf8(mIsolate, name),
+//              rtObjectWrapper::createFromObjectReference(mIsolate, val));
 }
 
 
