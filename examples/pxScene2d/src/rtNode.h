@@ -2,7 +2,6 @@
 #define RTNODE_H
 
 
-#include "rtRefT.h"
 #include "rtObject.h"
 #include "rtValue.h"
 
@@ -46,7 +45,7 @@ public:
   //
   void add(const char *name, rtValue  const& val);
 
-  rtObjectRef runThread(const char *js);
+  rtObjectRef runThread(const char *file);
 
   rtObjectRef runScript(const char *script);
   rtObjectRef runFile  (const char *file);
@@ -64,7 +63,7 @@ public:
     return l;
   }
 
-  std::string js_file;  // needed as string... strcpy() seemed to fail. TODO
+  const char *js_file;
 
   v8::Isolate                   *mIsolate;
   v8::Persistent<v8::Context>    mContext;

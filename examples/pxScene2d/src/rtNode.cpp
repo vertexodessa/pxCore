@@ -16,8 +16,6 @@
 
 #include "node.h"
 #include "node_javascript.h"
-#include "env.h"
-#include "env-inl.h"
 
 using namespace v8;
 using namespace node;
@@ -71,7 +69,7 @@ void *jsThread(void *ptr)
 
     if(instance)
     {
-      instance->runThread(instance->js_file.c_str());
+      instance->runThread(instance->js_file);
     }
     else
     {
@@ -178,14 +176,7 @@ rtObjectRef rtNodeContext::runFile(const char *file)
     return rtObjectRef(0);  // ERROR
   }
 
-  std::ifstream       js_file(file);
-  std::stringstream   script;
-
-  script << js_file.rdbuf(); // slurp up file
-
-  std::string s = script.str();
-
-  startThread(s.c_str());
+  startThread(file);
 
   return rtObjectRef(0);// JUNK
 
@@ -227,8 +218,6 @@ rtObjectRef rtNodeContext::runScript(const char *script)
 
 int rtNodeContext::startThread(const char *js)
 {
-  //strcpy(js_file, js);
-
   js_file = js;
 
   if(pthread_create(&worker, NULL, jsThread, (void *) this))
@@ -239,10 +228,21 @@ int rtNodeContext::startThread(const char *js)
 }
 
 
-rtObjectRef rtNodeContext::runThread(const char *js)
+rtObjectRef rtNodeContext::runThread(const char *file)
 {
 //  int exec_argc = 0;
 //  const char** exec_argv;
+
+  // - - - - - - - - - - - - - - - - - - - - - - - - - -
+  // Read the script file
+  std::ifstream       js_file(file);
+  std::stringstream   script;
+
+  script << js_file.rdbuf(); // slurp up file
+
+  std::string s = script.str();
+
+  // - - - - - - - - - - - - - - - - - - - - - - - - - -
 
   {//scope
 
@@ -254,7 +254,7 @@ rtObjectRef rtNodeContext::runThread(const char *js)
 
     Context::Scope context_scope(local_context);
 
-    Local<String> source = String::NewFromUtf8(mIsolate, js);
+    Local<String> source = String::NewFromUtf8(mIsolate, s.c_str());//js);
 
     // Compile the source code.
     Local<Script> script = Script::Compile(source);
