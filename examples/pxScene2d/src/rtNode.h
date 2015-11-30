@@ -10,7 +10,14 @@
 #include "include/libplatform/libplatform.h"
 
 
+namespace node
+{
+class Environment;
+}
+
+
 class rtNodeContext;
+
 typedef rtRefT<rtNodeContext> rtNodeContextRef;
 
 
@@ -34,10 +41,15 @@ public:
   rtNodeContext();
   ~rtNodeContext();
 
-  void addObject(std::string const& name, rtObjectRef const& obj);
+  //  rtStringRef <<< as an OUT parameter
+  //
+  void addObject(const char *name, rtObjectRef const& obj);
 
-  rtObjectRef run(std::string js);
-  rtObjectRef run_thread(std::string js);
+  rtObjectRef runThread(const char *js);
+
+  rtObjectRef runScript(const char *script);
+  rtObjectRef runFile  (const char *file);
+
 
   unsigned long AddRef()
   {
@@ -51,7 +63,7 @@ public:
     return l;
   }
 
-  std::string   js_file;
+  std::string js_file;  // needed as string... strcpy() seemed to fail. TODO
 
   v8::Isolate                   *mIsolate;
   v8::Persistent<v8::Context>    mContext;
@@ -60,10 +72,10 @@ public:
   v8::Persistent<v8::ObjectTemplate>  globalTemplate;
 
 private:
-  rtObjectRef run_snippet(std::string js);
-  rtObjectRef run_file(std::string file);
 
-  int startThread(std::string js);
+  node::Environment* mEnv;
+
+  int startThread(const char *js);
 
   int mRefCount;
 };

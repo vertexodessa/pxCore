@@ -25,6 +25,15 @@ using namespace v8;
 using namespace node;
 
 
+//namespace node
+//{
+//extern bool use_debug_agent;
+//extern bool debug_wait_connect;
+//}
+
+static void getScene(   const FunctionCallbackInfo<Value>& args); //fwd
+static void disposeNode(const FunctionCallbackInfo<Value>& args); //fwd
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 pxEventLoop eventLoop;
@@ -38,10 +47,30 @@ public:
     return node::PersistentToLocal(isolate, mJavaScene);
   }
 
-  void setScene(Isolate *isolate, pxScene2dRef s)
+  void setScene(rtNodeContextRef ctx, pxScene2dRef s)
   {
+    Isolate::Scope isolate_scope(ctx->mIsolate);
+    HandleScope     handle_scope(ctx->mIsolate);    // Create a stack-allocated handle scope.
+
+    // Get a Local context...
+    Local<Context> local_context = node::PersistentToLocal<Context>(ctx->mIsolate, ctx->mContext );
+    Context::Scope context_scope(local_context);
+
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    Handle<Object>  global = local_context->Global();
+
+    global->Set(String::NewFromUtf8(ctx->mIsolate, "getScene"),
+                FunctionTemplate::New(ctx->mIsolate, getScene)->GetFunction());
+
+    global->Set(String::NewFromUtf8(ctx->mIsolate, "dispose"),
+                FunctionTemplate::New(ctx->mIsolate, disposeNode)->GetFunction());
+
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
     mScene = s;
-    mJavaScene.Reset(isolate, rtObjectWrapper::createFromObjectReference(isolate, mScene.getPtr()));
+
+    mJavaScene.Reset(ctx->mIsolate, rtObjectWrapper::createFromObjectReference(ctx->mIsolate, mScene.getPtr()));
   }
 
   void onCloseRequest()
@@ -52,8 +81,8 @@ public:
   }
 private:
 
-  Persistent<Object> mJavaScene;
-  pxScene2dRef mScene;
+  Persistent<Object>  mJavaScene;
+  pxScene2dRef        mScene;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -68,8 +97,6 @@ static void getScene(const FunctionCallbackInfo<Value>& args)
 
   args.GetReturnValue().Set(scope.Escape(win.scene(args.GetIsolate())));
 }
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static void disposeNode(const FunctionCallbackInfo<Value>& args)
 {
@@ -94,8 +121,13 @@ args_t *s_gArgs;
 
 int main(int argc, char** argv)
 {
-  args_t aa(/* argc */ 1, argv);   // HACK ... not aure why 'node' chokes on args of "rtNode start.js"
+//  args_t aa(/*argc*/ 1, argv);   // HACK ... not aure why 'node' chokes on args of "rtNode start.js"
+
+  args_t aa(argc, argv);
   s_gArgs = &aa;
+
+//  s_gArgs->argc = 1;
+//  s_gArgs->argv = NULL;
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   //
@@ -104,8 +136,6 @@ int main(int argc, char** argv)
   rtNode myNode;
 
   rtNodeContextRef ctx = myNode.createContext();
-
-  node_isolate = ctx->mIsolate; // Must come first !!
 
   myNode.init(s_gArgs->argc, s_gArgs->argv);
 
@@ -127,46 +157,24 @@ int main(int argc, char** argv)
 
   scene->init();
 
-  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-  Isolate::Scope isolate_scope(ctx->mIsolate);
-  HandleScope     handle_scope(ctx->mIsolate);    // Create a stack-allocated handle scope.
-
-  // Get a Local context...
-  Local<Context> local_context = node::PersistentToLocal<Context>(ctx->mIsolate, ctx->mContext );
-  Context::Scope context_scope(local_context);
-
-  Handle<Object>  global = local_context->Global();
-
-  win.setScene(ctx->mIsolate, scene);
+  win.setScene(ctx, scene);
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  //
+  // RUN !
+  //
+  ctx->runScript("1+2");
+  ctx->runScript("2+3");
+  ctx->runScript("3+4");
+  ctx->runScript("4+5");
+  ctx->runScript("var blah = \"Hello World\"");
 
-  global->Set(String::NewFromUtf8(ctx->mIsolate, "getScene"),
-              FunctionTemplate::New(ctx->mIsolate, getScene)->GetFunction());
+  ctx->runFile("start.js");
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  global->Set(String::NewFromUtf8(ctx->mIsolate, "dispose"),
-              FunctionTemplate::New(ctx->mIsolate, disposeNode)->GetFunction());
-
-  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-  if( argc > 0)
-  {
-    ctx->run(argv[1]);
-  }
-
-//  if(argc >= 2)
-//  {
-//    printf("\n\n#### Running USER JavaScript... [ %s ] \n", argv[1]);
-//    ctx->run(argv[1]);
-//  }
-//  else // Default to ...
-//  {
-//    printf("\n\n#### Running DEFAULT JavaScript...\n");
-//    ctx->run("start.js");
-//  }
+//  use_debug_agent = true;
+//  debug_wait_connect = true;
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 

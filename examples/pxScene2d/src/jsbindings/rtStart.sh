@@ -16,14 +16,14 @@ export LD_LIBRARY_PATH=$pxSceneDir/external/png/.libs/:$pxSceneDir/external/jpg/
 
 export NODE_PATH=$NODE_PATH:`pwd`
 
-#../rtNode $1
+#gdb --args ../rtNode --debug ../rtTest.js
+../rtNode $1 $2 $3 $4 $5 $6 $7
 
-if [ "$#" -ne 1 ]; then
-echo here....
-   ../rtNode "./start.js"
-else
-   ../rtNode $1
-fi
+#if [ "$#" -ne 1 ]; then
+#   ../rtNode "./start.js"
+#else
+#   ../rtNode $1
+#fi
 
 ##gdb --args ../rtNode start.js url=$*
 #node start.js url=$*
