@@ -192,6 +192,11 @@ public:
     return PX_OK;
   }
   
+  virtual unsigned int getNativeId()
+  {
+    return mTextureId;
+  }
+  
   virtual pxError prepareForRendering()
   {
     glBindFramebuffer(GL_FRAMEBUFFER, mFramebufferId);
@@ -612,6 +617,7 @@ public:
   virtual void init(const char* v, const char* f)
   {
     mProgram = createShaderProgram(v, f);
+
     prelink();
     linkShaderProgram(mProgram);
     postlink();
