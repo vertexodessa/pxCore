@@ -212,8 +212,8 @@ NODE_EXTERN void Init(int* argc,
 class Environment; 
 
 NODE_EXTERN int  Start(int argc, char *argv[]);                          /*MODIFIED CODE*/
-//NODE_EXTERN void StartDebug(Environment* env, bool wait);                /*MODIFIED CODE*/
-//NODE_EXTERN void EnableDebug(Environment* env);                          /*MODIFIED CODE*/
+NODE_EXTERN void StartDebug(Environment* env, bool wait);                /*MODIFIED CODE*/
+NODE_EXTERN void EnableDebug(Environment* env);                          /*MODIFIED CODE*/
 //NODE_EXTERN void DispatchDebugMessagesAsyncCallback(uv_async_t* handle); /*MODIFIED CODE*/
 
 NODE_EXTERN Environment* CreateEnvironment(v8::Isolate* isolate,
