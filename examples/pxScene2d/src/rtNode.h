@@ -9,6 +9,8 @@
 #include "include/v8.h"
 #include "include/libplatform/libplatform.h"
 
+#include "env.h"
+#include "env-inl.h"
 
 namespace node
 {
