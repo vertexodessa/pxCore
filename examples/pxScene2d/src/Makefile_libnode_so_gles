@@ -16,8 +16,6 @@ RT_SRCS=\
            rtString.cpp \
            rtObject.cpp \
            rtValue.cpp \
-           linux/rtMutexNative.cpp \
-           linux/rtThreadPoolNative.cpp \
            rtThreadPool.cpp \
            rtThreadTask.cpp \
            rtLibrary.cpp \
@@ -36,10 +34,6 @@ PX_SRCS=\
            pxFileDownloader.cpp \
            pxInterpolators.cpp \
 	   pxMatrix4T.cpp \
-	   jsbindings/rtWrapperUtils.cpp \
-           jsbindings/rtFunctionWrapper.cpp \
-           jsbindings/rtObjectWrapper.cpp \
-           jsbindings/jsCallback.cpp \
            rtNode.cpp
 
 PXCOREDIR=../../../
@@ -59,19 +53,20 @@ SEARCH=\
   -I$(NODEINC)/src \
   -I$(NODEINC)/deps/uv/include \
   -I$(NODEINC)/deps/v8 \
+  -I$(NODEINC)/deps/cares/include \
   -I$(NODEINC)/deps/debugger-agent/include \
   -I$(NODEINC)/deps/v8/include \
-  $(PXCORE_INCLUDES)
+	$(PXCORE_INCLUDES)
 
 
-CXXFLAGS= -g $(SEARCH) -DRT_PLATFORM_LINUX -DPX_NO_WINDOW -DPX_PLATFORM_GENERIC_EGL -DBSTD_CPU_ENDIAN=BSTD_ENDIAN_LITTLE -fPIC
+CXXFLAGS= -Wno-attributes -Wall -Wextra -g -fpermissive -fPIC $(SEARCH) -DRT_PLATFORM_LINUX -DPX_NO_WINDOW -DPX_PLATFORM_GENERIC_EGL -DBSTD_CPU_ENDIAN=BSTD_ENDIAN_LITTLE 
 
 
 LDNODE   = -L$(NODEDIR)/out/Debug/obj.target
 LDNODEV8 = -L$(NODEDIR)/out/Debug
 
 
-LDEXT   = -png16 -ljpeg -lfreetype -curl $(LDNODE) $(LDNODEV8)
+LDEXT   = -lpng16 -ljpeg -lfreetype -lcurl $(LDNODE) $(LDNODEV8)
 
 LDFLAGS = -lnode -pthread $(LDEXT) -ldl -lrt -shared 
 
@@ -79,48 +74,48 @@ LDFLAGS = -lnode -pthread $(LDEXT) -ldl -lrt -shared
 OBJDIR=obj
 
 pxViewWindow.o: ../../../src/pxViewWindow.cpp
-	g++ -o $(OBJDIR)/pxViewWindow.o -Wall $(CXXFLAGS) -c ../../../pxViewWindow.cpp
+	$(CXX) -o $(OBJDIR)/pxViewWindow.o -Wall $(CXXFLAGS) -c ../../../pxViewWindow.cpp
 
 pxOffscreen.o: ../../../src/pxOffscreen.cpp
-	g++ -o $(OBJDIR)/.o -Wall $(CXXFLAGS) -c ../../../pxOffscreen.cpp
+	$(CXX) -o $(OBJDIR)/.o -Wall $(CXXFLAGS) -c ../../../pxOffscreen.cpp
 
 pxWindowNative.o: ../../../src/generic/pxWindowNative.cpp
-	g++ -o $(OBJDIR)/.o -Wall $(CXXFLAGS) -c ../../../generic/pxWindowNative.cpp
+	$(CXX) -o $(OBJDIR)/.o -Wall $(CXXFLAGS) -c ../../../generic/pxWindowNative.cpp
 
 pxBufferNative.o: ../../../src/gles/pxBufferNative.cpp
-	g++ -o $(OBJDIR)/.o -Wall $(CXXFLAGS) -c ../../../gles/pxBufferNative.cpp
+	$(CXX) -o $(OBJDIR)/.o -Wall $(CXXFLAGS) -c ../../../gles/pxBufferNative.cpp
 
 pxOffscreenNative.o: ../../../src/gles/pxOffscreenNative.cpp
-	g++ -o $(OBJDIR)/.o -Wall $(CXXFLAGS) -c ../../../gles/pxOffscreenNative.cpp
+	$(CXX) -o $(OBJDIR)/.o -Wall $(CXXFLAGS) -c ../../../gles/pxOffscreenNative.cpp
 
 pxEventLoopNative.o: ../../../src/gles/pxEventLoopNative.cpp
-	g++ -o $(OBJDIR)/.o -Wall $(CXXFLAGS) -c ../../../gles/pxEventLoopNative.cpp
+	$(CXX) -o $(OBJDIR)/.o -Wall $(CXXFLAGS) -c ../../../gles/pxEventLoopNative.cpp
 
 pxTimerNative.o: ../../../src/gles/pxTimerNative.cpp
-	g++ -o $(OBJDIR)/.o -Wall $(CXXFLAGS) -c ../../../gles/pxTimerNative.cpp
+	$(CXX) -o $(OBJDIR)/.o -Wall $(CXXFLAGS) -c ../../../gles/pxTimerNative.cpp
 
 pxWindowUtil.o: ../../../src/pxWindowUtil.cpp
-	g++ -o $(OBJDIR)/.o -Wall $(CXXFLAGS) -c ../../../pxWindowUtil.cpp
+	$(CXX) -o $(OBJDIR)/.o -Wall $(CXXFLAGS) -c ../../../pxWindowUtil.cpp
 
 
 
 rtMutexNative.o: linux/rtMutexNative.cpp
-	g++ -o $(OBJDIR)/rtMutexNative.o -Wall $(CXXFLAGS) -c linux/rtMutexNative.cpp
+	$(CXX) -o $(OBJDIR)/rtMutexNative.o -Wall $(CXXFLAGS) -c linux/rtMutexNative.cpp
 
 rtThreadPoolNative.o: linux/rtThreadPoolNative.cpp
-	g++ -o $(OBJDIR)/rtThreadPoolNative.o -Wall $(CXXFLAGS) -c linux/rtThreadPoolNative.cpp
+	$(CXX) -o $(OBJDIR)/rtThreadPoolNative.o -Wall $(CXXFLAGS) -c linux/rtThreadPoolNative.cpp
 
 $(OBJDIR)/rtWrapperUtils.o: jsbindings/rtWrapperUtils.cpp
-	g++ -o $(OBJDIR)/rtWrapperUtils.o -Wall $(CXXFLAGS) -c jsbindings/rtWrapperUtils.cpp
+	$(CXX) -o $(OBJDIR)/rtWrapperUtils.o -Wall $(CXXFLAGS) -c jsbindings/rtWrapperUtils.cpp
 
 $(OBJDIR)/rtFunctionWrapper.o: jsbindings/rtFunctionWrapper.cpp
-	g++ -o $(OBJDIR)/rtFunctionWrapper.o -Wall $(CXXFLAGS) -c jsbindings/rtFunctionWrapper.cpp
+	$(CXX) -o $(OBJDIR)/rtFunctionWrapper.o -Wall $(CXXFLAGS) -c jsbindings/rtFunctionWrapper.cpp
 
 $(OBJDIR)/rtObjectWrapper.o: jsbindings/rtObjectWrapper.cpp
-	g++ -o $(OBJDIR)/rtObjectWrapper.o -Wall $(CXXFLAGS) -c jsbindings/rtObjectWrapper.cpp
+	$(CXX) -o $(OBJDIR)/rtObjectWrapper.o -Wall $(CXXFLAGS) -c jsbindings/rtObjectWrapper.cpp
 
 $(OBJDIR)/jsCallback.o: jsbindings/jsCallback.cpp
-	g++ -o $(OBJDIR)/jsCallback.o -Wall $(CXXFLAGS) -c jsbindings/jsCallback.cpp
+	$(CXX) -o $(OBJDIR)/jsCallback.o -Wall $(CXXFLAGS) -c jsbindings/jsCallback.cpp
 
 
 SRCS=$(PX_SRCS) $(RT_SRCS) 
