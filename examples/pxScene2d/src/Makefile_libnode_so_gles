@@ -60,7 +60,8 @@ SEARCH=\
   -I$(NODEINC)/deps/uv/include \
   -I$(NODEINC)/deps/v8 \
   -I$(NODEINC)/deps/debugger-agent/include \
-  -I$(NODEINC)/deps/v8/include
+  -I$(NODEINC)/deps/v8/include \
+  $(PXCORE_INCLUDES)
 
 
 CXXFLAGS= -g $(SEARCH) -DRT_PLATFORM_LINUX -DPX_NO_WINDOW -DPX_PLATFORM_GENERIC_EGL -DBSTD_CPU_ENDIAN=BSTD_ENDIAN_LITTLE -fPIC
