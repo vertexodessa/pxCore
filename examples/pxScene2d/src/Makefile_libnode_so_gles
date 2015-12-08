@@ -68,7 +68,7 @@ LDNODEV8 = -L$(NODEDIR)/out/Debug
 
 LDEXT   = -lpng16 -ljpeg -lfreetype -lcurl $(LDNODE) $(LDNODEV8)
 
-LDFLAGS = -lnode -pthread $(LDEXT) -ldl -lrt -shared 
+LDFLAGS = -lnode -pthread $(LDEXT) -ldl -lrt -shared -Wl,-soname,librtnode.so -o librtnode.so.1.0 
 
 
 OBJDIR=obj
@@ -134,5 +134,7 @@ $(OBJDIR)/%.o : %.c
 
 
 rtNode: $(OBJS)
-	$(CXX) $(OBJS) $(LDFLAGS) -o librtnode.so
+	$(CXX) $(OBJS) $(LDFLAGS) 
+	ln -s librtnode.so.1.0 librtnode.so.1
+	ln -s librtnode.so.1 librtnode.so
 
