@@ -294,9 +294,9 @@ rtError jsObjectWrapper::getAllKeys(Isolate* isolate, rtValue* value)
 
 rtError jsObjectWrapper::Get(const char* name, rtValue* value)
 {
-  if (!value)
-    return RT_ERROR_INVALID_ARG;
   if (!name)
+    return RT_ERROR_INVALID_ARG;
+  if (!value)
     return RT_ERROR_INVALID_ARG;
 
   if (strcmp(name, jsObjectWrapper::kIsJavaScriptObjectWrapper) == 0)
@@ -357,9 +357,9 @@ rtError jsObjectWrapper::Get(uint32_t i, rtValue* value)
 
 rtError jsObjectWrapper::Set(const char* name, const rtValue* value)
 {
-  if (!value)
-    return RT_ERROR_INVALID_ARG;
   if (!name)
+    return RT_ERROR_INVALID_ARG;
+  if (!value)
     return RT_ERROR_INVALID_ARG;
 
   Local<String> s = String::NewFromUtf8(mIsolate, name);

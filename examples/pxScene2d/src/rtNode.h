@@ -12,12 +12,14 @@
 #include "env.h"
 #include "env-inl.h"
 
+
 namespace node
 {
 class Environment;
 }
 
 
+class rtNode;
 class rtNodeContext;
 
 typedef rtRefT<rtNodeContext> rtNodeContextRef;
@@ -40,7 +42,7 @@ args_t;
 class rtNodeContext  // V8
 {
 public:
-  rtNodeContext();
+  rtNodeContext(v8::Isolate *isolate);
   ~rtNodeContext();
 
   //  rtStringRef <<< as an OUT parameter
@@ -51,6 +53,10 @@ public:
 
   rtObjectRef runScript(const char *script);
   rtObjectRef runFile  (const char *file);
+
+
+  void uvWorker();
+  int  startUVThread();
 
 
   unsigned long AddRef()
@@ -67,15 +73,20 @@ public:
 
   const char *js_file;
 
+  rtNode   *node;
+
+
   v8::Isolate                   *mIsolate;
   v8::Persistent<v8::Context>    mContext;
+
+  node::Environment*             mEnv;
   v8::Persistent<v8::Object>     rtWrappers;
 
-  v8::Persistent<v8::ObjectTemplate>  globalTemplate;
+ // v8::Persistent<v8::ObjectTemplate>  globalTemplate;
 
 private:
-
-  node::Environment* mEnv;
+  pthread_t worker;
+  pthread_t uv_thread;
 
   int startThread(const char *js);
 
@@ -88,6 +99,7 @@ class rtNode
 {
 public:
   rtNode();
+  ~rtNode();
 
   void init(int argc, char** argv);
   void term();
@@ -97,8 +109,11 @@ public:
   rtNodeContextRef createContext(bool ownThread = false);
 
 private:
-  v8::Platform  *mPlatform;
-  v8::Extension *mPxNodeExtension;
+
+  v8::Isolate                   *mIsolate;
+
+//  v8::Platform  *mPlatform;
+//  v8::Extension *mPxNodeExtension;
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

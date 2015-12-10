@@ -1,4 +1,4 @@
-console.log("\nFrom start.js ... " + junk + "\n");
+//console.log("\nFrom start.js ... " + junk + "\n");
 
 var setLoggingLevel = require('rcvrcore/Logger').setLoggingLevel;
 

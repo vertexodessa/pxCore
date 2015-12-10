@@ -57,7 +57,31 @@ bool rtIsMainThread()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-pthread_t worker;
+void *uvThread(void *ptr)
+{
+  printf("uvThread() - ENTER\n");
+
+  if(ptr)
+  {
+    rtNodeContext *ctx = (rtNodeContext *) ptr;
+
+    if(ctx)
+    {
+      ctx->uvWorker();
+    }
+    else
+    {
+      fprintf(stderr, "FATAL - No node instance... uvThread() exiting...");
+    }
+  }
+
+  printf("uvThread() - EXITING...\n");
+
+  return NULL;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void *jsThread(void *ptr)
 {
@@ -65,11 +89,11 @@ void *jsThread(void *ptr)
 
   if(ptr)
   {
-    rtNodeContext *instance = (rtNodeContext *) ptr;
+    rtNodeContext *ctx = (rtNodeContext*) ptr;
 
-    if(instance)
+    if(ctx)
     {
-      instance->runThread(instance->js_file);
+      ctx->runThread(ctx->js_file);
     }
     else
     {
@@ -85,14 +109,26 @@ void *jsThread(void *ptr)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-rtNodeContext::rtNodeContext() :
-  mIsolate(NULL), mRefCount(0)
+static inline bool file_exists(const char *file)
 {
-  // Create a new Isolate and make it the current one.
-  mIsolate = Isolate::New();
+  struct stat buffer;
+  return (stat (file, &buffer) == 0);
+}
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+rtNodeContext::rtNodeContext(v8::Isolate *isolate) :
+   mRefCount(0), mIsolate(isolate)
+{
+  assert(isolate); // MUST HAVE !
+
+  Locker                locker(mIsolate);
   Isolate::Scope isolate_scope(mIsolate);
   HandleScope     handle_scope(mIsolate);
+
+  node_isolate = mIsolate; // Must come first !!
 
   // Create a new context.
   mContext.Reset(mIsolate, Context::New(mIsolate));
@@ -134,6 +170,7 @@ rtNodeContext::rtNodeContext() :
 }
 
 
+
 rtNodeContext::~rtNodeContext()
 {
   mContext.Reset();
@@ -144,8 +181,11 @@ rtNodeContext::~rtNodeContext()
 
 void rtNodeContext::add(const char *name, rtValue const& val)
 {
+  Locker                locker(mIsolate);
   Isolate::Scope isolate_scope(mIsolate);
   HandleScope     handle_scope(mIsolate);    // Create a stack-allocated handle scope.
+
+  printf("\n#### [%p]  %s() >> Adding \"%s\"\n", this, __FUNCTION__, name);
 
   // Get a Local context...
   Local<Context> local_context = node::PersistentToLocal<Context>(mIsolate, mContext);
@@ -154,18 +194,7 @@ void rtNodeContext::add(const char *name, rtValue const& val)
   Handle<Object> global = local_context->Global();
 
   global->Set(String::NewFromUtf8(mIsolate, name), rt2js(mIsolate, val));
-
-//  global->Set(String::NewFromUtf8(mIsolate, name),
-//              rtObjectWrapper::createFromObjectReference(mIsolate, val));
 }
-
-
-static inline bool file_exists(const char *file)
-{
-  struct stat buffer;
-  return (stat (file, &buffer) == 0);
-}
-
 
 rtObjectRef rtNodeContext::runFile(const char *file)
 {
@@ -213,12 +242,15 @@ rtObjectRef rtNodeContext::runScript(const char *script)
     printf("DEBUG:  %15s()    - RESULT = %s\n", __FUNCTION__, *utf8);  // TODO:  Probably need an actual RESULT return mechanisim
 
     return rtObjectRef(0);// JUNK
+
   }//scope
 }
 
 int rtNodeContext::startThread(const char *js)
 {
   js_file = js;
+
+//  printf("\n startThread() - ENTER\n");
 
   if(pthread_create(&worker, NULL, jsThread, (void *) this))
   {
@@ -228,36 +260,42 @@ int rtNodeContext::startThread(const char *js)
 }
 
 
+#define USE_REDUCED_SCOPE
+
 rtObjectRef rtNodeContext::runThread(const char *file)
 {
 //  int exec_argc = 0;
 //  const char** exec_argv;
 
+  printf("\n#### [%p]  %s() >> Running \"%s\"\n", this, __FUNCTION__, file);
+
   // - - - - - - - - - - - - - - - - - - - - - - - - - -
   // Read the script file
   std::ifstream       js_file(file);
-  std::stringstream   script;
+  std::stringstream   src_file;
 
-  script << js_file.rdbuf(); // slurp up file
+  src_file << js_file.rdbuf(); // slurp up file
 
-  std::string s = script.str();
+  std::string s = src_file.str();
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-  {//scope
+    Local<Script> script;
+
+  {//scope- - - - - - - - - - - - - - -
 
     Locker                locker(mIsolate);
     Isolate::Scope isolate_scope(mIsolate);
     HandleScope     handle_scope(mIsolate);    // Create a stack-allocated handle scope.
 
     Local<Context> local_context = node::PersistentToLocal<Context>(mIsolate, mContext);
-
     Context::Scope context_scope(local_context);
 
-    Local<String> source = String::NewFromUtf8(mIsolate, s.c_str());//js);
+    Local<String> source = String::NewFromUtf8(mIsolate, s.c_str());
 
     // Compile the source code.
-    Local<Script> script = Script::Compile(source);
+  //  Local<Script> script = Script::Compile(source);
+    script = Script::Compile(source);
 
     // Run the script to get the result.
     Local<Value> result = script->Run();
@@ -265,10 +303,40 @@ rtObjectRef rtNodeContext::runThread(const char *file)
     // Convert the result to an UTF8 string and print it.
     String::Utf8Value utf8(result);
 
-    int code;
-    bool more;
-    do
-    {
+#ifdef USE_REDUCED_SCOPE
+  }//scope- - - - - - - - - - - - - - -
+#endif
+
+    uvWorker();
+
+#ifndef USE_REDUCED_SCOPE
+  }//scope- - - - - - - - - - - - - - -
+#endif
+
+  return  rtObjectRef(0);
+}
+
+
+void rtNodeContext::uvWorker()
+{
+  int code;
+  bool more;
+
+  printf("\n Start >>> uvWorker() !!!! \n");
+
+  do
+  {
+    {//scope- - - - - - - - - - - - - - -
+
+#ifdef USE_REDUCED_SCOPE
+      Locker                locker(mIsolate);
+      Isolate::Scope isolate_scope(mIsolate);
+      HandleScope     handle_scope(mIsolate);    // Create a stack-allocated handle scope.
+
+      Local<Context> local_context = node::PersistentToLocal<Context>(mIsolate, mContext);
+      Context::Scope context_scope(local_context);
+#endif
+
       more = uv_run(mEnv->event_loop(), UV_RUN_ONCE);
 
       if (more == false)
@@ -284,22 +352,30 @@ rtObjectRef rtNodeContext::runThread(const char *file)
           more = true;
         }
       }
-    } while (more == true);
 
-    code = EmitExit(mEnv);
-    RunAtExit(mEnv);
+    }//scope - - - - - - - - - - - - - - -
 
-  }//scope
+  } while (more == true);
 
-  return  rtObjectRef(0);
+  printf("\n End >>> uvWorker() !!!! \n");
+
+  code = EmitExit(mEnv);
+  RunAtExit(mEnv);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-rtNode::rtNode() : mPlatform(NULL), mPxNodeExtension(NULL)
+rtNode::rtNode() //: mPlatform(NULL), mPxNodeExtension(NULL)
 {
+  mIsolate = Isolate::New();
 
+  node_isolate = mIsolate; // Must come first !!
+}
+
+rtNode::~rtNode()
+{
+   mIsolate->Dispose();
 }
 
 void rtNode::init(int argc, char** argv)
@@ -310,12 +386,15 @@ void rtNode::init(int argc, char** argv)
   // Hack around with the argv pointer. Used for process.title = "blah".
   argv = uv_setup_args(argc, argv);
 
-  use_debug_agent = true; // JUNK
+ // use_debug_agent = true; // JUNK
 
-  Init(&argc, const_cast<const char**>(argv), &exec_argc, &exec_argv);
+  if(node_is_initialized == false)
+  {
+    Init(&argc, const_cast<const char**>(argv), &exec_argc, &exec_argv);
 
-  V8::Initialize();
-  node_is_initialized = true;
+    V8::Initialize();
+    node_is_initialized = true;
+  }
 }
 
 void rtNode::term()
@@ -323,17 +402,17 @@ void rtNode::term()
   V8::Dispose();
   V8::ShutdownPlatform();
 
-  if(mPlatform)
-  {
-    delete mPlatform;
-    mPlatform = NULL;
-  }
+//  if(mPlatform)
+//  {
+//    delete mPlatform;
+//    mPlatform = NULL;
+//  }
 
-  if(mPxNodeExtension)
-  {
-    delete mPxNodeExtension;
-    mPxNodeExtension = NULL;
-  }
+//  if(mPxNodeExtension)
+//  {
+//    delete mPxNodeExtension;
+//    mPxNodeExtension = NULL;
+//  }
 }
 
 rtNodeContextRef rtNode::getGlobalContext() const
@@ -343,9 +422,9 @@ rtNodeContextRef rtNode::getGlobalContext() const
 
 rtNodeContextRef rtNode::createContext(bool ownThread)
 {
-  rtNodeContextRef ctxref = new rtNodeContext();
+  rtNodeContextRef ctxref = new rtNodeContext(mIsolate);
 
-  node_isolate = ctxref->mIsolate; // Must come first !!
+  ctxref->node = this;
 
   return ctxref;
 }
