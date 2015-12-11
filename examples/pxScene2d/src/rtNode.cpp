@@ -1,6 +1,10 @@
 // pxCore CopyRight 2007-2015 John Robinson
 // rtNode.cpp
 
+#include <unistd.h>
+#include <stdio.h>
+#include <errno.h>
+
 #include <string>
 #include <fstream>
 
@@ -368,6 +372,29 @@ void rtNodeContext::uvWorker()
 
 rtNode::rtNode() //: mPlatform(NULL), mPxNodeExtension(NULL)
 {
+  char cwd[1024] = {};
+
+  const char* NODE_PATH = ::getenv("NODE_PATH");
+
+  if(NODE_PATH == NULL)
+  {
+    if (getcwd(cwd, sizeof(cwd)) != NULL)
+    {
+      ::setenv("NODE_PATH", cwd, 1); // last arg is 'overweite' ... 0 means DON'T !
+
+      printf("\n\n INFO: NODE_PATH = [%s] \n", cwd);
+    }
+    else
+    {
+      printf("\nERROR: failed to set NODE_PATH\n");
+    }
+  }
+  else
+  {
+     printf("\nINFO:  NODE_PATH =  [%s]  <<<<< ALREADY SET !\n", NODE_PATH);
+  }
+
+
   mIsolate = Isolate::New();
 
   node_isolate = mIsolate; // Must come first !!
