@@ -73,36 +73,36 @@ LDFLAGS = -lnode -pthread $(LDEXT) -ldl -lrt -shared -Wl,-soname,librtnode.so -o
 
 OBJDIR=obj
 
-pxViewWindow.o: ../../../src/pxViewWindow.cpp
-	$(CXX) -o $(OBJDIR)/pxViewWindow.o -Wall $(CXXFLAGS) -c ../../../pxViewWindow.cpp
+$(OBJDIR)/pxViewWindow.o: ../../../src/pxViewWindow.cpp
+	$(CXX) -o $(OBJDIR)/pxViewWindow.o -Wall $(CXXFLAGS) -c ../../../src/pxViewWindow.cpp
 
-pxOffscreen.o: ../../../src/pxOffscreen.cpp
-	$(CXX) -o $(OBJDIR)/.o -Wall $(CXXFLAGS) -c ../../../pxOffscreen.cpp
+$(OBJDIR)/pxOffscreen.o: ../../../src/pxOffscreen.cpp
+	$(CXX) -o $(OBJDIR)/pxOffscreen.o -Wall $(CXXFLAGS) -c ../../../src/pxOffscreen.cpp
 
-pxWindowNative.o: ../../../src/generic/pxWindowNative.cpp
-	$(CXX) -o $(OBJDIR)/.o -Wall $(CXXFLAGS) -c ../../../generic/pxWindowNative.cpp
+$(OBJDIR)/pxWindowNative.o: ../../../src/generic/pxWindowNative.cpp
+	$(CXX) -o $(OBJDIR)/pxWindowNative.o -Wall $(CXXFLAGS) -c ../../../src/generic/pxWindowNative.cpp
 
-pxBufferNative.o: ../../../src/gles/pxBufferNative.cpp
-	$(CXX) -o $(OBJDIR)/.o -Wall $(CXXFLAGS) -c ../../../gles/pxBufferNative.cpp
+$(OBJDIR)/pxBufferNative.o: ../../../src/gles/pxBufferNative.cpp
+	$(CXX) -o $(OBJDIR)/pxBufferNative.o -Wall $(CXXFLAGS) -c ../../../src/gles/pxBufferNative.cpp
 
-pxOffscreenNative.o: ../../../src/gles/pxOffscreenNative.cpp
-	$(CXX) -o $(OBJDIR)/.o -Wall $(CXXFLAGS) -c ../../../gles/pxOffscreenNative.cpp
+$(OBJDIR)/pxOffscreenNative.o: ../../../src/gles/pxOffscreenNative.cpp
+	$(CXX) -o $(OBJDIR)/pxOffscreenNative.o -Wall $(CXXFLAGS) -c ../../../src/gles/pxOffscreenNative.cpp
 
-pxEventLoopNative.o: ../../../src/gles/pxEventLoopNative.cpp
-	$(CXX) -o $(OBJDIR)/.o -Wall $(CXXFLAGS) -c ../../../gles/pxEventLoopNative.cpp
+$(OBJDIR)/pxEventLoopNative.o: ../../../src/gles/pxEventLoopNative.cpp
+	$(CXX) -o $(OBJDIR)/pxEventLoopNative.o -Wall $(CXXFLAGS) -c ../../../src/gles/pxEventLoopNative.cpp
 
-pxTimerNative.o: ../../../src/gles/pxTimerNative.cpp
-	$(CXX) -o $(OBJDIR)/.o -Wall $(CXXFLAGS) -c ../../../gles/pxTimerNative.cpp
+$(OBJDIR)/pxTimerNative.o: ../../../src/gles/pxTimerNative.cpp
+	$(CXX) -o $(OBJDIR)/pxTimerNative.o -Wall $(CXXFLAGS) -c ../../../src/gles/pxTimerNative.cpp
 
-pxWindowUtil.o: ../../../src/pxWindowUtil.cpp
-	$(CXX) -o $(OBJDIR)/.o -Wall $(CXXFLAGS) -c ../../../pxWindowUtil.cpp
+$(OBJDIR)/pxWindowUtil.o: ../../../src/pxWindowUtil.cpp
+	$(CXX) -o $(OBJDIR)/pxWindowUtil.o -Wall $(CXXFLAGS) -c ../../../src/pxWindowUtil.cpp
 
 
 
-rtMutexNative.o: linux/rtMutexNative.cpp
+$(OBJDIR)/rtMutexNative.o: linux/rtMutexNative.cpp
 	$(CXX) -o $(OBJDIR)/rtMutexNative.o -Wall $(CXXFLAGS) -c linux/rtMutexNative.cpp
 
-rtThreadPoolNative.o: linux/rtThreadPoolNative.cpp
+$(OBJDIR)/rtThreadPoolNative.o: linux/rtThreadPoolNative.cpp
 	$(CXX) -o $(OBJDIR)/rtThreadPoolNative.o -Wall $(CXXFLAGS) -c linux/rtThreadPoolNative.cpp
 
 $(OBJDIR)/rtWrapperUtils.o: jsbindings/rtWrapperUtils.cpp
@@ -123,6 +123,8 @@ SRCS=$(PX_SRCS) $(RT_SRCS)
 OBJS=$(patsubst %.cpp, $(OBJDIR)/%.o, $(notdir $(SRCS)))
 OBJS:=$(patsubst %.c, $(OBJDIR)/%.o, $(OBJS))
 OBJS: $(SRCS)
+OTHER_OBJS=$(OBJDIR)/pxViewWindow.o $(OBJDIR)/pxOffscreen.o $(OBJDIR)/pxWindowNative.o $(OBJDIR)/pxBufferNative.o $(OBJDIR)/pxOffscreenNative.o $(OBJDIR)/pxEventLoopNative.o $(OBJDIR)/pxTimerNative.o $(OBJDIR)/pxWindowUtil.o $(OBJDIR)/rtMutexNative.o $(OBJDIR)/rtThreadPoolNative.o $(OBJDIR)/rtWrapperUtils.o $(OBJDIR)/rtFunctionWrapper.o $(OBJDIR)/rtObjectWrapper.o $(OBJDIR)/jsCallback.o
+OBJS_ALL=$(OBJS) $(OTHER_OBJS)
 
 $(OBJDIR)/%.o : %.cpp
 	@[ -d $(OBJDIR) ] || mkdir -p $(OBJDIR)
@@ -133,8 +135,8 @@ $(OBJDIR)/%.o : %.c
 	$(CC) -c $(CXXFLAGS) $< -o $@
 
 
-rtNode: $(OBJS)
-	$(CXX) $(OBJS) $(LDFLAGS) 
-	ln -s librtnode.so.1.0 librtnode.so.1
-	ln -s librtnode.so.1 librtnode.so
+rtNode: $(OBJS_ALL) 
+	$(CXX) $(OBJS_ALL) $(LDFLAGS) 
+	ln -sf librtnode.so.1.0 librtnode.so.1
+	ln -sf librtnode.so.1 librtnode.so
 
