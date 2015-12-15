@@ -232,6 +232,8 @@ rtObjectRef rtNodeContext::runScript(const char *script)
 
     Local<String> source = String::NewFromUtf8(mIsolate, script);
 
+    printf("\nINFO:  <<<<< COMPILE SCRIPT !\n");
+
     // Compile the source code.
     Local<Script> run_script = Script::Compile(source);
 
@@ -264,8 +266,6 @@ int rtNodeContext::startThread(const char *js)
 }
 
 
-#define USE_REDUCED_SCOPE
-
 rtObjectRef rtNodeContext::runThread(const char *file)
 {
 //  int exec_argc = 0;
@@ -284,8 +284,6 @@ rtObjectRef rtNodeContext::runThread(const char *file)
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-    Local<Script> script;
-
   {//scope- - - - - - - - - - - - - - -
 
     Locker                locker(mIsolate);
@@ -298,8 +296,7 @@ rtObjectRef rtNodeContext::runThread(const char *file)
     Local<String> source = String::NewFromUtf8(mIsolate, s.c_str());
 
     // Compile the source code.
-  //  Local<Script> script = Script::Compile(source);
-    script = Script::Compile(source);
+    Local<Script> script = Script::Compile(source);
 
     // Run the script to get the result.
     Local<Value> result = script->Run();
@@ -307,15 +304,9 @@ rtObjectRef rtNodeContext::runThread(const char *file)
     // Convert the result to an UTF8 string and print it.
     String::Utf8Value utf8(result);
 
-#ifdef USE_REDUCED_SCOPE
   }//scope- - - - - - - - - - - - - - -
-#endif
 
-    uvWorker();
-
-#ifndef USE_REDUCED_SCOPE
-  }//scope- - - - - - - - - - - - - - -
-#endif
+  uvWorker();
 
   return  rtObjectRef(0);
 }
@@ -331,15 +322,12 @@ void rtNodeContext::uvWorker()
   do
   {
     {//scope- - - - - - - - - - - - - - -
-
-#ifdef USE_REDUCED_SCOPE
       Locker                locker(mIsolate);
       Isolate::Scope isolate_scope(mIsolate);
       HandleScope     handle_scope(mIsolate);    // Create a stack-allocated handle scope.
 
       Local<Context> local_context = node::PersistentToLocal<Context>(mIsolate, mContext);
       Context::Scope context_scope(local_context);
-#endif
 
       more = uv_run(mEnv->event_loop(), UV_RUN_ONCE);
 
@@ -380,9 +368,9 @@ rtNode::rtNode() //: mPlatform(NULL), mPxNodeExtension(NULL)
   {
     if (getcwd(cwd, sizeof(cwd)) != NULL)
     {
-      ::setenv("NODE_PATH", cwd, 1); // last arg is 'overweite' ... 0 means DON'T !
+      ::setenv("NODE_PATH", cwd, 1); // last arg is 'overwrite' ... 0 means DON'T !
 
-      printf("\n\n INFO: NODE_PATH = [%s] \n", cwd);
+      printf("\n\n INFO: NODE_PATH = [%s] << NEW\n", cwd);
     }
     else
     {
