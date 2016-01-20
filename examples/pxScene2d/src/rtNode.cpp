@@ -132,8 +132,6 @@ rtNodeContext::rtNodeContext(v8::Isolate *isolate) :
   Isolate::Scope isolate_scope(mIsolate);
   HandleScope     handle_scope(mIsolate);
 
-  node_isolate = mIsolate; // Must come first !!
-
   // Create a new context.
   mContext.Reset(mIsolate, Context::New(mIsolate));
 
@@ -171,6 +169,8 @@ rtNodeContext::rtNodeContext(v8::Isolate *isolate) :
   {
     EnableDebug(mEnv);
   }
+
+  AddRef();
 }
 
 
@@ -178,8 +178,7 @@ rtNodeContext::rtNodeContext(v8::Isolate *isolate) :
 rtNodeContext::~rtNodeContext()
 {
   mContext.Reset();
-
-  mIsolate->Dispose();
+  // NOTE: 'mIsolate' is owned by rtNode.  Don't destroy here !
 }
 
 
@@ -189,7 +188,7 @@ void rtNodeContext::add(const char *name, rtValue const& val)
   Isolate::Scope isolate_scope(mIsolate);
   HandleScope     handle_scope(mIsolate);    // Create a stack-allocated handle scope.
 
-  printf("\n#### [%p]  %s() >> Adding \"%s\"\n", this, __FUNCTION__, name);
+//  printf("\n#### [%p]  %s() >> Adding \"%s\"\n", this, __FUNCTION__, name);
 
   // Get a Local context...
   Local<Context> local_context = node::PersistentToLocal<Context>(mIsolate, mContext);
@@ -306,9 +305,14 @@ rtObjectRef rtNodeContext::runThread(const char *file)
 
   }//scope- - - - - - - - - - - - - - -
 
-  uvWorker();
+  static bool only_one = false;
+  if(only_one == false)
+  {
+    only_one = true;
+    uvWorker();
+  }
 
-  return  rtObjectRef(0);
+  return rtObjectRef(0);
 }
 
 
@@ -382,7 +386,6 @@ rtNode::rtNode() //: mPlatform(NULL), mPxNodeExtension(NULL)
      printf("\nINFO:  NODE_PATH =  [%s]  <<<<< ALREADY SET !\n", NODE_PATH);
   }
 
-
   mIsolate = Isolate::New();
 
   node_isolate = mIsolate; // Must come first !!
@@ -390,6 +393,8 @@ rtNode::rtNode() //: mPlatform(NULL), mPxNodeExtension(NULL)
 
 rtNode::~rtNode()
 {
+//   printf("\n ############# ~rtNode() ... n");
+
    mIsolate->Dispose();
 }
 
@@ -414,6 +419,8 @@ void rtNode::init(int argc, char** argv)
 
 void rtNode::term()
 {
+  printf("\n ############# rtNode::term() ... n");
+
   V8::Dispose();
   V8::ShutdownPlatform();
 
