@@ -85,6 +85,8 @@ public:
  // v8::Persistent<v8::ObjectTemplate>  globalTemplate;
 
 private:
+  bool      mKillUVWorker;
+
   pthread_t worker;
   pthread_t uv_thread;
 
@@ -110,9 +112,11 @@ public:
 
 private:
 
-  v8::Isolate                   *mIsolate;
+  void nodePath();
 
-//  v8::Platform  *mPlatform;
+  v8::Isolate   *mIsolate;
+  v8::Platform  *mPlatform;
+
 //  v8::Extension *mPxNodeExtension;
 };
 

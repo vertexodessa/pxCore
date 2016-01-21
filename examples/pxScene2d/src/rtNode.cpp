@@ -124,7 +124,7 @@ static inline bool file_exists(const char *file)
 
 
 rtNodeContext::rtNodeContext(v8::Isolate *isolate) :
-   mRefCount(0), mIsolate(isolate)
+   mRefCount(0), mIsolate(isolate), mKillUVWorker(false)
 {
   assert(isolate); // MUST HAVE !
 
@@ -173,10 +173,10 @@ rtNodeContext::rtNodeContext(v8::Isolate *isolate) :
   AddRef();
 }
 
-
-
 rtNodeContext::~rtNodeContext()
 {
+  mKillUVWorker = true; // kill UV loop
+
   mContext.Reset();
   // NOTE: 'mIsolate' is owned by rtNode.  Don't destroy here !
 }
@@ -351,7 +351,7 @@ void rtNodeContext::uvWorker()
 
     }//scope - - - - - - - - - - - - - - -
 
-  } while (more == true);
+  } while (more == true && mKillUVWorker == false);
 
   printf("\n End >>> uvWorker() !!!! \n");
 
@@ -362,7 +362,21 @@ void rtNodeContext::uvWorker()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-rtNode::rtNode() //: mPlatform(NULL), mPxNodeExtension(NULL)
+rtNode::rtNode() : mPlatform(NULL) //, mPxNodeExtension(NULL)
+{  
+  nodePath();
+
+  mIsolate = Isolate::New();
+
+  node_isolate = mIsolate; // Must come first !!
+}
+
+rtNode::~rtNode()
+{
+  term();
+}
+
+void rtNode::nodePath()
 {
   char cwd[1024] = {};
 
@@ -385,24 +399,10 @@ rtNode::rtNode() //: mPlatform(NULL), mPxNodeExtension(NULL)
   {
      printf("\nINFO:  NODE_PATH =  [%s]  <<<<< ALREADY SET !\n", NODE_PATH);
   }
-
-  mIsolate = Isolate::New();
-
-  node_isolate = mIsolate; // Must come first !!
-}
-
-rtNode::~rtNode()
-{
-//   printf("\n ############# ~rtNode() ... n");
-
-   mIsolate->Dispose();
 }
 
 void rtNode::init(int argc, char** argv)
 {
-//  int exec_argc;
-//  const char** exec_argv;
-
   // Hack around with the argv pointer. Used for process.title = "blah".
   argv = uv_setup_args(argc, argv);
 
@@ -412,6 +412,9 @@ void rtNode::init(int argc, char** argv)
   {
     Init(&argc, const_cast<const char**>(argv), &exec_argc, &exec_argv);
 
+//    mPlatform = platform::CreateDefaultPlatform();
+//    V8::InitializePlatform(mPlatform);
+
     V8::Initialize();
     node_is_initialized = true;
   }
@@ -419,22 +422,30 @@ void rtNode::init(int argc, char** argv)
 
 void rtNode::term()
 {
-  printf("\n ############# rtNode::term() ... n");
+  if(node_is_initialized)
+  {
+    node_is_initialized = false;
 
-  V8::Dispose();
-  V8::ShutdownPlatform();
+    mIsolate = NULL;
 
-//  if(mPlatform)
-//  {
-//    delete mPlatform;
-//    mPlatform = NULL;
-//  }
+    node_isolate->Dispose();
+    node_isolate = NULL;
 
-//  if(mPxNodeExtension)
-//  {
-//    delete mPxNodeExtension;
-//    mPxNodeExtension = NULL;
-//  }
+    V8::Dispose();
+
+  //  V8::ShutdownPlatform();
+  //  if(mPlatform)
+  //  {
+  //    delete mPlatform;
+  //    mPlatform = NULL;
+  //  }
+
+  //  if(mPxNodeExtension)
+  //  {
+  //    delete mPxNodeExtension;
+  //    mPxNodeExtension = NULL;
+  //  }
+  }
 }
 
 rtNodeContextRef rtNode::getGlobalContext() const
