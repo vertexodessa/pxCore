@@ -25,81 +25,12 @@
 using namespace v8;
 using namespace node;
 
-
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 
 rtError getScene(int numArgs, const rtValue* args, rtValue* result, void* ctx); // fwd
 
 //static void disposeNode(const FunctionCallbackInfo<Value>& args); //fwd
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-pxEventLoop eventLoop;
-
-class testWindow: public pxViewWindow
-{
-public:
-
-  std::string debug_name;
-
-//  virtual void onAnimationTimer()
-//  {
-//    printf("\nDEBUG: onAnimationTimer()) - debug_name = %s  \n", debug_name.c_str());
-
-//    pxViewWindow::onAnimationTimer();
-//  }
-
-  virtual void onKeyDown(uint32_t keycode, uint32_t flags)
-  {
-     printf("\nDEBUG: %s()) - debug_name = %s  \n",__FUNCTION__, debug_name.c_str());
-
-     pxViewWindow::onKeyDown(keycode, flags);
-  }
-
-  void setScene(rtNodeContextRef ctx, pxScene2dRef s)
-  {
-    rtValue v = new rtFunctionCallback(getScene, s.getPtr());
-
-    ctx->add("getScene", v);
-
-    mScene = s;
-  }
-
-  void onCloseRequest()
-  {
-    // When someone clicks the close box no policy is predefined.
-    // so we need to explicitly tell the event loop to exit
-    eventLoop.exit();
-  }
-private:
-
-  pxScene2dRef        mScene;
-};
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-static testWindow win1;
-static testWindow win2;
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-rtError getScene(int numArgs, const rtValue* args, rtValue* result, void* ctx)
-{
-  // We don't use the arguments so just return the scene object reference
-  if (result)
-  {
-    pxScene2dRef s = (pxScene2d*)ctx;
-
-    printf("\n\n #############\n #############  getScene() >>  s = %p\n #############\n\n", (void *) s);
-
-    *result = s; // return the scene reference
-  }
-
-  return RT_OK;
-}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -120,14 +51,86 @@ rtError getScene(int numArgs, const rtValue* args, rtValue* result, void* ctx)
 //    wrapper->dispose();
 //}
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// MAIN()
+//
 
-void sleep(unsigned int mseconds)
+void testWindows();
+void testContexts();
+
+
+args_t *s_gArgs;
+
+int main(int argc, char** argv)
 {
-    clock_t goal = mseconds + clock();
-    while (goal > clock());
+  static args_t aa(argc, argv);
+  s_gArgs = &aa;
+
+  testWindows(); /// multi threaded
+ // testContexts();  /// single threaded
+
+   return 0;
 }
 
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+pxEventLoop eventLoop;
+
+class testWindow: public pxViewWindow
+{
+public:
+
+  std::string debug_name;
+
+  void setScene(rtNodeContextRef ctx, pxScene2dRef s)
+  {
+    rtValue v = new rtFunctionCallback(getScene, s.getPtr());
+
+    ctx->add("getScene", v);
+
+    mScene = s;
+  }
+
+  void onClose()
+  {
+    printf("\n\n #############\n #############  onClose() \n #############\n\n");
+  }
+
+  void onCloseRequest()
+  {
+    printf("\n\n #############\n #############  onCloseRequest() \n #############\n\n");
+
+    // When someone clicks the close box no policy is predefined.
+    // so we need to explicitly tell the event loop to exit
+  //  eventLoop.exit();
+  }
+private:
+
+  pxScene2dRef        mScene;
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+rtError getScene(int numArgs, const rtValue* args, rtValue* result, void* ctx)
+{
+  // We don't use the arguments so just return the scene object reference
+  if (result)
+  {
+    pxScene2dRef s = (pxScene2d*)ctx;
+
+//    printf("\n\n #############\n #############  getScene() >>  s = %p\n #############\n\n", (void *) s);
+
+    *result = s; // return the scene reference
+  }
+
+  return RT_OK;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define USE_CONTEXT_1
@@ -136,14 +139,17 @@ void sleep(unsigned int mseconds)
 #define USE_CONTEXT_2
 #define USE_WINDOW_2
 
-args_t *s_gArgs;
+#define USE_CONTEXT_3
+#define USE_WINDOW_3
 
-int main(int argc, char** argv)
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void testWindows()
 {
-//  args_t aa(/*argc*/ 1, argv);   // HACK ... not sure why 'node' chokes on args of "rtNode start.js"
+  rtNode node1;//(s_gArgs->argc, s_gArgs->argv);
 
-  args_t aa(argc, argv);
-  s_gArgs = &aa;
+  node1.init(s_gArgs->argc, s_gArgs->argv);
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   //
@@ -152,37 +158,23 @@ int main(int argc, char** argv)
 
 #ifdef USE_CONTEXT_1
 
-  printf("\n### Node 1A"); // ##############################
-
-  rtNode node1;
-
-  printf("\n### Node 1B"); // ##############################
-
   rtNodeContextRef ctx1 = node1.createContext();
 
-  printf("\n### Context 1A"); // ##############################
-
-  node1.init(s_gArgs->argc, s_gArgs->argv);
-
-  printf("\n### Context 1B"); // ##############################
 #endif
 
 #ifdef USE_CONTEXT_2
 
-//  printf("\n### Node 2A"); // ##############################
-
-//  rtNode node2;
-
-//  printf("\n### Node 2B"); // ##############################
-
   rtNodeContextRef ctx2 = node1.createContext();
 
-//  printf("\n### Context 2A"); // ##############################
-
-//  node2.init(s_gArgs->argc, s_gArgs->argv);
-
-  printf("\n### Context 2B"); // ##############################
 #endif
+
+#ifdef USE_CONTEXT_3
+
+  rtNodeContextRef ctx3 = node1.createContext();
+
+#endif
+
+  printf("\n Setup WINDOW and SCENE");  fflush(stdout);
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   //
@@ -190,13 +182,11 @@ int main(int argc, char** argv)
   //
 #ifdef USE_WINDOW_1
 
-//  printf("\n### Window 1A"); // ##############################
+  static testWindow win1;
 
   pxScene2dRef scene1 = new pxScene2d;
 
-  win1.init(810, 10, 800, 600);
-
-//  printf("\n### Window 1B\n"); // ##############################
+  win1.init(10, 10, 800, 600);
 
   win1.setTitle(">> Window 1 <<");
   win1.setVisibility(true);
@@ -209,8 +199,6 @@ int main(int argc, char** argv)
 
   scene1->init();
 
-  printf("\n### Window 1C"); // ##############################
-
 #endif
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -219,18 +207,16 @@ int main(int argc, char** argv)
   //
 #ifdef USE_WINDOW_2
 
-//  printf("\n### Window 2A"); // ##############################
+  static testWindow win2;
 
   pxScene2dRef scene2 = new pxScene2d;
 
-  win2.init(10, 10, 750, 550);
+  win2.init(810, 10, 750, 550);
 
   win2.setTitle(">> Window 2 <<");
   win2.setVisibility(true);
   win2.setView(scene2);
   win2.setAnimationFPS(60);
-
-//  printf("\n### Window 2B\n"); // ##############################
 
   win2.debug_name = "WindowTwo";
 
@@ -238,7 +224,31 @@ int main(int argc, char** argv)
 
   scene2->init();
 
-  printf("\n### Window 2C"); // ##############################
+#endif
+
+
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  //
+  // Setup WINDOW and SCENE
+  //
+#ifdef USE_WINDOW_3
+
+  static testWindow win3;
+
+  pxScene2dRef scene3 = new pxScene2d;
+
+  win3.init(10, 610, 750, 550);
+
+  win3.setTitle(">> Window 3 <<");
+  win3.setVisibility(true);
+  win3.setView(scene3);
+  win3.setAnimationFPS(60);
+
+  win3.debug_name = "WindowThree";
+
+  win3.setScene(ctx3, scene3);
+
+  scene3->init();
 
 #endif
 
@@ -247,48 +257,36 @@ int main(int argc, char** argv)
   // RUN !
   //
 
-#ifdef USE_CONTEXT_1
-
-//  printf("\n### Context 1A"); // ##############################
-
-//  rtValue junk1("Hello from add() World! - Context 1");
-//  ctx1->add("junk", junk1);
-
-//  ctx1->runScript("1+2");
-
-//  printf("\n### Context 1B"); // ##############################
-
-#endif
-
 #ifdef USE_WINDOW_1
   printf("\n### Window Run 1A"); // ##############################
 
-//  ctx1->runFile("start.js");
-  ctx1->runFile("fancyp.js");
+//  ctx1->runScript("console.log(\"Hello\")");
+//  ctx1->runScript("sayHello");
 
-  printf("\n### Window Run 1B"); // ##############################
-#endif
+  ctx1->runThread("start.js");
 
-#ifdef USE_CONTEXT_2
+//  ctx1->runThread("test1sec.js");
 
-//  printf("\n### Context 2A"); // ##############################
-
-//  rtValue junk2("Hello from add() World! - Context 2");
-//  ctx2->add("junk", junk2);
-
- // ctx2->runScript("99+11");
-
-//  printf("\n### Context 2B"); // ##############################
+  ctx1->Release();
 
 #endif
 
 #ifdef USE_WINDOW_2
 //  printf("\n### Window Run 2A"); // ##############################
 
-  ctx2->runFile("start.js");
-//  ctx2->runFile("fancyp.js");
+//  ctx2->runFile("start.js");
+  ctx2->runThread("fancyp.js");
 
   printf("\n### Window Run 2B"); // ##############################
+#endif
+
+#ifdef USE_WINDOW_3
+//  printf("\n### Window Run 3A"); // ##############################
+
+//  ctx3->runFile("start.js");
+  ctx3->runFile("fancyp.js");
+
+  printf("\n### Window Run 3B"); // ##############################
 #endif
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -296,28 +294,138 @@ int main(int argc, char** argv)
 //  use_debug_agent = true;
 //  debug_wait_connect = true;
 
-  printf("\n### eventLoop 1A"); // ##############################
-  fflush(stdout);
-
-  printf("\n### eventLoop 2A"); // ##############################
+//  printf("\n### eventLoop "); // ##############################
 
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#if defined(USE_WINDOW_1) || defined(USE_WINDOW_2)
+#if defined(USE_WINDOW_1) || defined(USE_WINDOW_2) || defined(USE_WINDOW_3)
   eventLoop.run();
 #endif
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+//  while(true)
+//  {
+//    usleep(1000); // 1 second
+//    printf("\n###########################  TICK1 always !!");
+//  }
 
-// TODO - term() crashes !!!... fix it !
-
-#ifdef USE_CONTEXT_1
-//  node1.term();
-#endif
-
-#ifdef USE_CONTEXT_2
-//  node2.term();
-#endif
-
-  return 0;
+  getchar();
+  printf("\n INFO:  EXITING 11111");
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+class Timer
+{
+public:
+  Timer()
+  {
+    clock_gettime(CLOCK_REALTIME, &beg_);
+  }
+
+  double elapsed()
+  {
+    clock_gettime(CLOCK_REALTIME, &end_);
+    return end_.tv_sec  - beg_.tv_sec +
+          (end_.tv_nsec - beg_.tv_nsec) / 1000000000.;
+  }
+
+  void reset()
+  {
+    clock_gettime(CLOCK_REALTIME, &beg_);
+  }
+
+private:
+    timespec beg_, end_;
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//#define NODE_PER
+
+void testContexts()
+{
+  rtNodeContextRef ctx1;
+
+  double elapsed = 0.0;
+
+  Timer tm_node;
+
+  static rtNode node1(s_gArgs->argc, s_gArgs->argv);  // MUST BE STATIC !
+
+  elapsed = tm_node.elapsed();
+
+  printf("\n NODE() ... took %f seconds", elapsed);
+
+  #define MYNODE node1
+
+#ifdef NODE_PER
+  double     min_node = 990.0;
+  double     max_node = 0.0;
+  double elapsed_node = 0.0;
+
+#endif
+
+  double     min_ctx = 990.0;
+  double     max_ctx = 0.0;
+  double elapsed_ctx = 0.0;
+
+  int    total_iterations = 4;
+
+  for (int i = 0; i< total_iterations; i++)
+  {
+
+#ifdef NODE_PER
+    Timer tm_node;
+    rtNode node_per;
+    elapsed = tm_node.elapsed();
+
+    elapsed_node += elapsed;
+
+    max_node = (max_node >= elapsed) ? max_node : elapsed;
+    min_node = (min_node <  elapsed) ? min_node : elapsed;
+
+#define MYNODE node_per
+
+#endif
+
+    Timer tm_ctx;
+    ctx1 = MYNODE.createContext();
+    elapsed = tm_ctx.elapsed();
+
+    if(i < 3)  printf("\n createContext() ... took %f seconds", elapsed);
+
+    elapsed_ctx += elapsed;
+
+    max_ctx = (max_ctx >= elapsed) ? max_ctx : elapsed;
+    min_ctx = (min_ctx <  elapsed) ? min_ctx : elapsed;
+
+    ctx1->runFile("test1sec.js");
+
+    ctx1->Release();
+  }//FOR
+
+  printf("\n");
+  printf("\n");
+
+#ifdef NODE_PER
+  double avg_node = (elapsed_node / (double) total_iterations);
+
+  printf("\n###    NODE: %d iterations took %f seconds  (%f sec average)", total_iterations,  elapsed_node, avg_node);
+  printf("\n###          Max =  %f seconds  Min = %f seconds", max_node, min_node);
+  printf("\n");
+#endif
+
+  double avg_ctx  = (elapsed_ctx  / (double) total_iterations);
+
+  printf("\n### CONTEXT: %d iterations took %f seconds  (%f sec average)", total_iterations,  elapsed_ctx, avg_ctx);
+  printf("\n###          Max =  %f seconds  Min = %f seconds", max_ctx, min_ctx);
+
+
+  printf("\n");
+  printf("\n");
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

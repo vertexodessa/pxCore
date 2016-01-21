@@ -14,9 +14,11 @@ export LD_LIBRARY_PATH=$pxSceneDir/external/png/.libs/:$pxSceneDir/external/jpg/
 #[ -f FontdinerSwanky.ttf ] || cp $pxSceneDir/src/FontdinerSwanky.ttf .
 #[ -f FreeSans.ttf ] || cp $pxSceneDir/src/FreeSans.ttf .
 
-export NODE_PATH=$NODE_PATH:`pwd`
+#export NODE_PATH=$NODE_PATH:`pwd`
 
 #gdb --args ../rtNode
+#strace -o trace.txt ../rtNode $1 $2 $3 $4 $5 $6 $7
+
 ../rtNode $1 $2 $3 $4 $5 $6 $7
 
 #if [ "$#" -ne 1 ]; then

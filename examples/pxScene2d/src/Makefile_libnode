@@ -60,7 +60,7 @@ SEARCH=\
   -I$(NODEINC)/deps/v8/include
 
 
-CXXFLAGS= -g $(SEARCH) -DENABLE_GLUT -DRT_PLATFORM_LINUX -DPX_PLATFORM_GLUT
+CXXFLAGS=  $(SEARCH) -DENABLE_GLUT -DRT_PLATFORM_LINUX -DPX_PLATFORM_GLUT
 #CXXFLAGS=-Wall -Wextra -g $(SEARCH) -DENABLE_GLUT -DRT_PLATFORM_LINUX -DPX_PLATFORM_GLUT
 
 
@@ -68,8 +68,12 @@ LDPNG    = -L$(EXTDIR)/png/.libs -lpng16
 LDJPG    = -L$(EXTDIR)/jpg/.libs -ljpeg
 LDFT     = -L$(EXTDIR)/ft/objs/.libs -lfreetype
 LDCURL   = -L$(EXTDIR)/curl/lib/.libs -lcurl
-LDNODE   = -L$(NODEDIR)/out/Debug/obj.target
-LDNODEV8 = -L$(NODEDIR)/out/Debug
+
+LDNODE   = -L$(NODEDIR)/out/Release/obj.target
+LDNODEV8 = -L$(NODEDIR)/out/Release
+
+#LDNODE   = -L$(NODEDIR)/out/Debug/obj.target
+#LDNODEV8 = -L$(NODEDIR)/out/Debug
 
 
 LDEXT   = $(LDPNG) $(LDJPG) $(LDFT) $(LDCURL) $(LDNODE) $(LDNODEV8)
