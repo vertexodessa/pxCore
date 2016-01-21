@@ -97,11 +97,18 @@ void *jsThread(void *ptr)
 
     if(ctx)
     {
-      ctx->runThread(ctx->js_file);
+      ctx->runFile(ctx->js_file);
     }
     else
     {
       fprintf(stderr, "FATAL - No Instance... jsThread() exiting...");
+    }
+
+    static bool only_one = false;
+    if(only_one == false)
+    {
+      only_one = true;
+      ctx->uvWorker();
     }
   }
 
@@ -127,6 +134,8 @@ rtNodeContext::rtNodeContext(v8::Isolate *isolate) :
    mRefCount(0), mIsolate(isolate), mKillUVWorker(false)
 {
   assert(isolate); // MUST HAVE !
+
+  AddRef();
 
   Locker                locker(mIsolate);
   Isolate::Scope isolate_scope(mIsolate);
@@ -169,8 +178,6 @@ rtNodeContext::rtNodeContext(v8::Isolate *isolate) :
   {
     EnableDebug(mEnv);
   }
-
-  AddRef();
 }
 
 rtNodeContext::~rtNodeContext()
@@ -199,7 +206,7 @@ void rtNodeContext::add(const char *name, rtValue const& val)
   global->Set(String::NewFromUtf8(mIsolate, name), rt2js(mIsolate, val));
 }
 
-rtObjectRef rtNodeContext::runFile(const char *file)
+rtObjectRef rtNodeContext::runThread(const char *file)
 {
   if(file_exists(file) == false)
   {
@@ -265,7 +272,7 @@ int rtNodeContext::startThread(const char *js)
 }
 
 
-rtObjectRef rtNodeContext::runThread(const char *file)
+rtObjectRef rtNodeContext::runFile(const char *file)
 {
 //  int exec_argc = 0;
 //  const char** exec_argv;
@@ -280,8 +287,6 @@ rtObjectRef rtNodeContext::runThread(const char *file)
   src_file << js_file.rdbuf(); // slurp up file
 
   std::string s = src_file.str();
-
-  // - - - - - - - - - - - - - - - - - - - - - - - - - -
 
   {//scope- - - - - - - - - - - - - - -
 
@@ -305,12 +310,12 @@ rtObjectRef rtNodeContext::runThread(const char *file)
 
   }//scope- - - - - - - - - - - - - - -
 
-  static bool only_one = false;
-  if(only_one == false)
-  {
-    only_one = true;
-    uvWorker();
-  }
+//  static bool only_one = false;
+//  if(only_one == false)
+//  {
+//    only_one = true;
+//    uvWorker();
+//  }
 
   return rtObjectRef(0);
 }
@@ -318,7 +323,6 @@ rtObjectRef rtNodeContext::runThread(const char *file)
 
 void rtNodeContext::uvWorker()
 {
-  int code;
   bool more;
 
   printf("\n Start >>> uvWorker() !!!! \n");
@@ -326,12 +330,12 @@ void rtNodeContext::uvWorker()
   do
   {
     {//scope- - - - - - - - - - - - - - -
-      Locker                locker(mIsolate);
-      Isolate::Scope isolate_scope(mIsolate);
-      HandleScope     handle_scope(mIsolate);    // Create a stack-allocated handle scope.
+      Locker                  locker(mIsolate);
+      Isolate::Scope   isolate_scope(mIsolate);
+      HandleScope       handle_scope(mIsolate);    // Create a stack-allocated handle scope.
 
-      Local<Context> local_context = node::PersistentToLocal<Context>(mIsolate, mContext);
-      Context::Scope context_scope(local_context);
+      Local<Context>   local_context = node::PersistentToLocal<Context>(mIsolate, mContext);
+      Context::Scope   context_scope(local_context);
 
       more = uv_run(mEnv->event_loop(), UV_RUN_ONCE);
 
@@ -348,14 +352,13 @@ void rtNodeContext::uvWorker()
           more = true;
         }
       }
-
     }//scope - - - - - - - - - - - - - - -
 
   } while (more == true && mKillUVWorker == false);
 
   printf("\n End >>> uvWorker() !!!! \n");
 
-  code = EmitExit(mEnv);
+  int code = EmitExit(mEnv);
   RunAtExit(mEnv);
 }
 
@@ -366,9 +369,18 @@ rtNode::rtNode() : mPlatform(NULL) //, mPxNodeExtension(NULL)
 {  
   nodePath();
 
-  mIsolate = Isolate::New();
-
+  mIsolate     = Isolate::New();
   node_isolate = mIsolate; // Must come first !!
+}
+
+rtNode::rtNode(int argc, char** argv) : mPlatform(NULL)//, mPxNodeExtension(NULL)
+{
+  nodePath();
+
+  mIsolate     = Isolate::New();
+  node_isolate = mIsolate; // Must come first !!
+
+  init(argc, argv);
 }
 
 rtNode::~rtNode()
@@ -378,12 +390,12 @@ rtNode::~rtNode()
 
 void rtNode::nodePath()
 {
-  char cwd[1024] = {};
-
   const char* NODE_PATH = ::getenv("NODE_PATH");
 
   if(NODE_PATH == NULL)
   {
+    char cwd[1024] = {};
+
     if (getcwd(cwd, sizeof(cwd)) != NULL)
     {
       ::setenv("NODE_PATH", cwd, 1); // last arg is 'overwrite' ... 0 means DON'T !

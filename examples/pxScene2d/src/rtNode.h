@@ -75,7 +75,7 @@ public:
 
   rtNode   *node;
 
-
+private:
   v8::Isolate                   *mIsolate;
   v8::Persistent<v8::Context>    mContext;
 
@@ -84,7 +84,6 @@ public:
 
  // v8::Persistent<v8::ObjectTemplate>  globalTemplate;
 
-private:
   bool      mKillUVWorker;
 
   pthread_t worker;
@@ -101,16 +100,16 @@ class rtNode
 {
 public:
   rtNode();
+  rtNode(int argc, char** argv);
   ~rtNode();
 
-  void init(int argc, char** argv);
-  void term();
-
   rtNodeContextRef getGlobalContext() const;
-
   rtNodeContextRef createContext(bool ownThread = false);
 
+  void init(int argc, char** argv);
+
 private:
+  void term();
 
   void nodePath();
 
