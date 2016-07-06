@@ -9,6 +9,10 @@ rtRemoteFunction::rtRemoteFunction(std::string const& id, std::string const& nam
   , m_rpc_client(client)
 {
     printf("setting meepalive for m_name %s\n", m_name.c_str());
+  if (!strcmp(id.c_str(), "global"))
+  {
+    m_rpc_client->keepAlive(m_name);
+  }
 }
 
 rtRemoteFunction::~rtRemoteFunction()

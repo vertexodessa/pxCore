@@ -17,6 +17,7 @@
 #include <errno.h>
 #include <algorithm>
 
+#include <algorithm>
 #include <rapidjson/document.h>
 
 rtRemoteClient::rtRemoteClient(int fd, sockaddr_storage const& local_endpoint, sockaddr_storage const& remote_endpoint)

@@ -39,6 +39,7 @@ public:
     rtValue* result, uint32_t timeout);
 
   void keepAlive(std::string const& s);
+
   void removeKeepAlive(std::string const& s);
 
   rtError setMessageCallback(rtRemoteMessageHandler const& handler)
