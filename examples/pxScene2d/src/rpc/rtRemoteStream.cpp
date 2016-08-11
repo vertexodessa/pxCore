@@ -276,6 +276,10 @@ rtRemoteStream::connectTo(sockaddr_storage const& endpoint)
   }
   fcntl(m_fd, F_SETFD, fcntl(m_fd, F_GETFD) | FD_CLOEXEC);
 
+  uint32_t one = 1;
+  if (-1 == setsockopt(m_fd, SOL_TCP, TCP_NODELAY, &one, sizeof(one)))
+      rtLogError("setting TCP_NODELAY failed");
+
   socklen_t len;
   rtSocketGetLength(endpoint, &len);
 

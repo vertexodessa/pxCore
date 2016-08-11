@@ -46,7 +46,7 @@ ifeq ($(DEBUG), 1)
   CXXFLAGS += -DRT_RPC_DEBUG
   CFLAGS   += -g -O0 -fno-inline
 else
-  CXXFLAGS += -O2
+  CXXFLAGS += -O2 -DRT_RPC_DEBUG
   CFLAGS   += -O2
 endif
 

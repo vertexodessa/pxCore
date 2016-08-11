@@ -38,8 +38,8 @@ public:
   rtError send(std::string const& objectName, std::string const& name, int argc, rtValue const* argv,
     rtValue* result, uint32_t timeout);
 
-  inline void keepAlive(std::string const& s)
-    { m_object_list.push_back(s); }
+  void keepAlive(std::string const& s);
+  void removeKeepAlive(std::string const& s);
 
   rtError setMessageCallback(rtRemoteMessageHandler const& handler)
     { m_message_handler = handler; return RT_OK; } 
@@ -71,6 +71,7 @@ private:
 
 private:
   std::shared_ptr<rtRemoteStream>   m_stream;
+  std::mutex                        m_mutex;
   std::vector<std::string>          m_object_list;
   rtRemoteMessageHandler            m_message_handler;
 };

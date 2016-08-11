@@ -2,6 +2,9 @@
 #define __RT_SOCKET_UTILS_H__
 
 #include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <rtError.h>
 #include <memory>
 #include <string>
