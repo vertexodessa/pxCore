@@ -229,7 +229,7 @@ rtValueWriter::write(rtValue const& from, rapidjson::Value& to, rapidjson::Docum
     val.AddMember(kFieldNameFunctionName, id, doc.GetAllocator());
     to.AddMember("value", val, doc.GetAllocator());
 
-    rtObjectCache::insert(id, func, -1);
+    rtObjectCache::insert(id, func, rtRemoteSetting<int>("rt.rpc.cache.max_object_lifetime"));
     return RT_OK;
   }
 

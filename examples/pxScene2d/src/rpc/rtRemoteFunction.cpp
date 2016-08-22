@@ -8,6 +8,7 @@ rtRemoteFunction::rtRemoteFunction(std::string const& id, std::string const& nam
   , m_name(name)
   , m_rpc_client(client)
 {
+    printf("setting meepalive for m_name %s\n", m_name.c_str());
 }
 
 rtRemoteFunction::~rtRemoteFunction()
@@ -33,8 +34,14 @@ rtRemoteFunction::Release()
 {
   unsigned long n = rtAtomicDec(&m_ref_count);
   if (n == 0)
+{
+  if (!strcmp(m_id.c_str(), "global"))
+  {
+    printf("removing meepalive for m_name %s\n", m_name.c_str());
+    m_rpc_client->removeKeepAlive(m_name);
+  }
     delete this;
-
+}
   // TODO: send deref here
   return n;
 }
