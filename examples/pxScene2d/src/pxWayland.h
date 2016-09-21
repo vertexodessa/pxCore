@@ -174,6 +174,7 @@ protected:
   rtObjectRef mRemoteObject;
 #endif //ENABLE_PX_WAYLAND_RPC
   rtString mRemoteObjectName;
+  mutable rtMutex mRemoteObjectNameMutex;
   mutable rtMutex mRemoteObjectMutex;
 };
 

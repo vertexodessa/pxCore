@@ -1,6 +1,8 @@
 // pxCore CopyRight 2007-2015 John Robinson
 // pxWayland.cpp
 
+#include <errno.h>
+
 #include "rtString.h"
 #include "rtRefT.h"
 #include "pxCore.h"
@@ -134,6 +136,8 @@ void pxWayland::createDisplay(rtString displayName)
       }
       if (mDisplayName.isEmpty())
           mDisplayName = WstCompositorGetDisplayName(mWCtx);
+
+      rtMutexLockGuard nameLock(mRemoteObjectNameMutex);
       if(mRemoteObjectName.isEmpty())
       {
           mRemoteObjectName = "wl-plgn-";
@@ -476,7 +480,20 @@ void pxWayland::terminateClient()
    {
       mWaitingForRemoteObject = false;
 
-      pthread_join( mFindRemoteThreadId, NULL );
+      struct timespec ts;
+      int s;
+
+      if (clock_gettime(CLOCK_REALTIME, &ts) == -1) {
+        rtLogError("Failed to get system time: %s", strerror(errno));
+        return;
+      }
+
+      ts.tv_sec += 2;
+      s = pthread_timedjoin_np(mFindRemoteThreadId, NULL, &ts);
+      if (s != 0) {
+        rtLogError("Thread join failed: %s", strerror(s));
+      }
+
    }
 #ifdef ENABLE_PX_WAYLAND_RPC
    if (!mEnv)
@@ -580,6 +597,12 @@ rtError pxWayland::connectToRemoteObject()
   while (findTime < MAX_FIND_REMOTE_TIMEOUT_IN_MS)
   {
     findTime += FIND_REMOTE_ATTEMPT_TIMEOUT_IN_MS;
+    rtMutexLockGuard nameLock(mRemoteObjectNameMutex);
+    if (!mRemoteObjectName)
+    {
+      rtLogError("remote object name is not set.");
+      return RT_ERROR;
+    }
     rtLogInfo("Attempting to find remote object %s", mRemoteObjectName.cString());
     errorCode = rtRemoteLocateObject(mEnv, mRemoteObjectName.cString(), mRemoteObject);
     if (errorCode != RT_OK)
@@ -596,8 +619,8 @@ rtError pxWayland::connectToRemoteObject()
 
   if (errorCode == RT_OK)
   {
-    mRemoteObject.send("init");
     mRemoteObjectMutex.lock();
+    mRemoteObject.send("init");
     mAPI = mRemoteObject;
     mRemoteObjectMutex.unlock();
 
