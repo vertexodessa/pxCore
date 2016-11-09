@@ -107,6 +107,7 @@ float calculateSD(std::vector<float> v)
 
 void Test_Set_Property(rtObjectRef obj)
 {
+  WTF_SCOPE0("Test_Set_Property");
   rtError e;
 
   int i = iter_count;
@@ -118,6 +119,7 @@ void Test_Set_Property(rtObjectRef obj)
   clock_gettime(CLOCK_REALTIME, &total_start);
   while (i--)
   {
+    WTF_SCOPE0("Test_Set_Property#loop_iteration");
     clock_gettime(CLOCK_REALTIME, &start);
     e = obj.set("message", "test");
     if (e != RT_OK)
@@ -143,7 +145,7 @@ void Test_Set_Property(rtObjectRef obj)
 
 void Test_Call_Method(rtObjectRef obj)
 {
-
+  WTF_SCOPE0("Test_Call_Method");
   int i = iter_count;
   rtError e;
 
@@ -156,6 +158,7 @@ void Test_Call_Method(rtObjectRef obj)
 
   while (i--)
   {
+    WTF_SCOPE0("Test_Call_Method#loop_iteration");
     clock_gettime(CLOCK_REALTIME, &start);
     e = obj.send("callTestMethod", "test");
     if (e != RT_OK)
@@ -217,6 +220,7 @@ void Test_Echo_Server()
 
 int main(int /*argc*/, char* /*argv*/[])
 {
+  WTF_THREAD_ENABLE("main");
   env = rtEnvironmentGetGlobal();
   {
     std::string local_file_name;
@@ -226,13 +230,14 @@ int main(int /*argc*/, char* /*argv*/[])
       if(RT_OK != e)
     	  puts("error running init");
       Test_Echo_Client();
+      wtf::Runtime::GetInstance()->SaveToFile("client.wtf-trace");
     }
     else
     {
       Test_Echo_Server();
     }
 
-    rtRemoteShutdown(env);
+    //rtRemoteShutdown(env);
 
     return 0;
   }

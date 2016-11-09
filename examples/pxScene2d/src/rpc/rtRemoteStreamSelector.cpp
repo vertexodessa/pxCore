@@ -21,6 +21,7 @@ rtRemoteStreamSelector::rtRemoteStreamSelector()
 void*
 rtRemoteStreamSelector::pollFds(void* argp)
 {
+  WTF_THREAD_ENABLE("pollfds");
   rtRemoteStreamSelector* selector = reinterpret_cast<rtRemoteStreamSelector *>(argp);
   rtError e = selector->doPollFds();
   if (e != RT_OK)

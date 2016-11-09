@@ -28,6 +28,8 @@ rtRemoteFunction::~rtRemoteFunction()
 rtError
 rtRemoteFunction::Send(int argc, rtValue const* argv, rtValue* result)
 {
+  WTF_SCOPE0("rtRemoteFunction#Send");
+
   rtValue res;
   rtError e = m_client->sendCall(m_id, m_name, argc, argv, res);
   if (e == RT_OK)

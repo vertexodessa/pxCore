@@ -74,7 +74,7 @@ endif
 CFLAGS+=-DRAPIDJSON_HAS_STDSTRING  -Wall -Wextra -DRT_PLATFORM_LINUX -I../ -I. -fPIC
 CFLAGS+=-DRT_REMOTE_LOOPBACK_ONLY `pkg-config --cflags glib-2.0`
 CXXFLAGS+=-std=c++0x $(CFLAGS) 
-LDFLAGS =-pthread -ldl -luuid -Wl,-rpath=../../,--enable-new-dtags `pkg-config --libs glib-2.0` -lwtf
+LDFLAGS =-pthread -ldl -luuid -Wl,-rpath=../../,--enable-new-dtags `pkg-config --libs glib-2.0` -lwtf -Wl,-rpath=/usr/local/lib/
 OBJDIR=obj
 
 RTCORE_OBJS =$(patsubst ../%.cpp, %.o        , $(notdir $(RTCORE_SRCS)))

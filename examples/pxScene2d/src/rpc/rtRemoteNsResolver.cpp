@@ -392,7 +392,7 @@ rtRemoteNsResolver::onLocate(rtRemoteMessagePtr const& doc, sockaddr_storage con
 
 void
 rtRemoteNsResolver::runListener()
-{
+{  WTF_THREAD_ENABLE("runListener");
   rtRemoteSocketBuffer buff;
   buff.reserve(1024 * 1024);
   buff.resize(1024 * 1024);

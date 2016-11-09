@@ -89,6 +89,7 @@ rtRemoteClient::~rtRemoteClient()
 rtError
 rtRemoteClient::send(rtRemoteMessagePtr const& msg)
 {
+  WTF_SCOPE0("rtRemoteClient#send");
   std::shared_ptr<rtRemoteStream> s = getStream();
   if (!s)
     return RT_ERROR_STREAM_CLOSED;
@@ -294,6 +295,7 @@ rtRemoteClient::sendSet(std::string const& objectId, uint32_t propertyIdx, rtVal
 rtError
 rtRemoteClient::sendSet(rtRemoteMessagePtr const& req, rtRemoteCorrelationKey k)
 {
+  WTF_SCOPE0("rtRemoteClient#sendSet");
   std::shared_ptr<rtRemoteStream> s = getStream();
   if (!s)
     return RT_ERROR_STREAM_CLOSED;
@@ -345,6 +347,7 @@ rtRemoteClient::sendGet(std::string const& objectId, uint32_t propertyIdx, rtVal
 rtError
 rtRemoteClient::sendGet(rtRemoteMessagePtr const& req, rtRemoteCorrelationKey k, rtValue& value)
 {
+  WTF_SCOPE0("rtRemoteClient#sendGet");
   std::shared_ptr<rtRemoteStream> s = getStream();
   if (!s)
     return RT_ERROR_STREAM_CLOSED;
@@ -395,6 +398,7 @@ rtRemoteClient::sendCall(std::string const& objectId, std::string const& methodN
 rtError
 rtRemoteClient::sendCall(rtRemoteMessagePtr const& req, rtRemoteCorrelationKey k, rtValue& result)
 {
+  WTF_SCOPE0("rtRemoteClient#sendCall");
   std::shared_ptr<rtRemoteStream> s = getStream();
   if (!s)
     return RT_ERROR_STREAM_CLOSED;

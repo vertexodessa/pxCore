@@ -464,6 +464,7 @@ rtRemoteMulticastResolver::locateObject(std::string const& name, sockaddr_storag
 void
 rtRemoteMulticastResolver::runListener()
 {
+  WTF_THREAD_ENABLE("runListener");
   rtRemoteSocketBuffer buff;
   buff.reserve(1024 * 1024);
   buff.resize(1024 * 1024);

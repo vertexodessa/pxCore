@@ -117,6 +117,7 @@ rtRemoteStream::send(rtRemoteMessagePtr const& msg)
 rtRemoteAsyncHandle
 rtRemoteStream::sendWithWait(rtRemoteMessagePtr const& msg, rtRemoteCorrelationKey k)
 {
+  WTF_SCOPE0("rtRemoteStream#sendWithWait");
   rtRemoteAsyncHandle asyncHandle(m_env, k);
   rtError e = rtSendDocument(*msg, m_fd, nullptr);
   if (e != RT_OK)

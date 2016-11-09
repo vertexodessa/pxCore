@@ -277,7 +277,7 @@ rtRemoteServer::registerObject(std::string const& objectId, rtObjectRef const& o
 
 void
 rtRemoteServer::runListener()
-{
+{  WTF_THREAD_ENABLE("runListener");
   time_t lastKeepAliveCheck = 0;
 
   rtRemoteSocketBuffer buff;
@@ -632,6 +632,7 @@ rtRemoteServer::onOpenSession(std::shared_ptr<rtRemoteClient>& client, rtRemoteM
 rtError
 rtRemoteServer::onGet(std::shared_ptr<rtRemoteClient>& client, rtRemoteMessagePtr const& doc)
 {
+  WTF_SCOPE0("rtRemoteServer#onGet");
   rtRemoteCorrelationKey key = rtMessage_GetCorrelationKey(*doc);
   char const* objectId = rtMessage_GetObjectId(*doc);
 
@@ -703,6 +704,7 @@ rtRemoteServer::onGet(std::shared_ptr<rtRemoteClient>& client, rtRemoteMessagePt
 rtError
 rtRemoteServer::onSet(std::shared_ptr<rtRemoteClient>& client, rtRemoteMessagePtr const& doc)
 {
+  WTF_SCOPE0("rtRemoteServer#onSet");
   rtRemoteCorrelationKey key = rtMessage_GetCorrelationKey(*doc);
   char const* objectId = rtMessage_GetObjectId(*doc);
 
@@ -755,6 +757,7 @@ rtRemoteServer::onSet(std::shared_ptr<rtRemoteClient>& client, rtRemoteMessagePt
 rtError
 rtRemoteServer::onMethodCall(std::shared_ptr<rtRemoteClient>& client, rtRemoteMessagePtr const& doc)
 {
+  WTF_SCOPE0("rtRemoteServer#onMethodCall");
   rtRemoteCorrelationKey key = rtMessage_GetCorrelationKey(*doc);
   char const* objectId = rtMessage_GetObjectId(*doc);
   rtError err   = RT_OK;
@@ -833,6 +836,7 @@ rtRemoteServer::onMethodCall(std::shared_ptr<rtRemoteClient>& client, rtRemoteMe
 rtError
 rtRemoteServer::onKeepAlive(std::shared_ptr<rtRemoteClient>& client, rtRemoteMessagePtr const& req)
 {
+  WTF_SCOPE0("rtRemoteServer#onKeepAlive");
   rtRemoteCorrelationKey key = rtMessage_GetCorrelationKey(*req);
 
   auto itr = req->FindMember(kFieldNameKeepAliveIds);

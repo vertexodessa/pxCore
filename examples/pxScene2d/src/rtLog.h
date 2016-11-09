@@ -20,6 +20,8 @@
 #define RT_PRINTF_FORMAT(IDX, FIRST)
 #endif
 
+#define WTF_ENABLE 1
+#include <wtf/macros.h>
 
 enum rtLogLevel
 {

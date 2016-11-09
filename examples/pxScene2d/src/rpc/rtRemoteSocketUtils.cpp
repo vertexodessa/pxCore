@@ -316,6 +316,7 @@ rtSocketToString(sockaddr_storage const& ss)
 rtError
 rtSendDocument(rapidjson::Document const& doc, int fd, sockaddr_storage const* dest)
 {
+  WTF_SCOPE0("rtSendDocument");
   rapidjson::StringBuffer buff;
   rapidjson::Writer<rapidjson::StringBuffer> writer(buff);
   doc.Accept(writer);
@@ -377,6 +378,7 @@ rtSendDocument(rapidjson::Document const& doc, int fd, sockaddr_storage const* d
     #ifndef __APPLE__
     flags = MSG_NOSIGNAL;
     #endif
+    WTF_SCOPE0("rtSendDocument#sendmsg");
 
     while (sendmsg (fd, &msg, flags) < 0)
     {
@@ -394,15 +396,19 @@ rtSendDocument(rapidjson::Document const& doc, int fd, sockaddr_storage const* d
 rtError
 rtReadMessage(int fd, rtRemoteSocketBuffer& buff, rtRemoteMessagePtr& doc)
 {
+  WTF_SCOPE0("rtReadMessage");
+
   rtError err = RT_OK;
 
   int n = 0;
   int capacity = static_cast<int>(buff.capacity());
 
+  {
+    WTF_SCOPE0("rtReadMessage#firstRead");
   err = rtReadUntil(fd, reinterpret_cast<char *>(&n), 4);
   if (err != RT_OK)
     return err;
-
+  }
   n = ntohl(n);
 
   if (n > capacity)
@@ -416,11 +422,14 @@ rtReadMessage(int fd, rtRemoteSocketBuffer& buff, rtRemoteMessagePtr& doc)
   buff.resize(n + 1);
   buff[n] = '\0';
 
-  err = rtReadUntil(fd, &buff[0], n);
-  if (err != RT_OK)
   {
-    rtLogError("failed to read payload message of length %d from socket", n);
-    return err;
+    WTF_SCOPE0("rtReadMessage");
+    err = rtReadUntil(fd, &buff[0], n);
+    if (err != RT_OK)
+    {
+      rtLogError("failed to read payload message of length %d from socket", n);
+      return err;
+    }
   }
     
   #ifdef RT_RPC_DEBUG
