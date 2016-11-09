@@ -9,166 +9,176 @@
 #include <iostream>
 #include <map>
 
+#include <time.h>
+#include <unistd.h>
+
+#include "glib_utils.h"
+
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/prettywriter.h>
 
+#include <stdio.h>
+#include <math.h>
+#include <algorithm> // std::min_element
+#include <iterator>  // std::begin, std::end
+
+  const int iter_count = 1000;
+
+
 rtRemoteEnvironment* env = nullptr;
-
-rtError
-rtRemoteRunUntil(rtRemoteEnvironment* env, uint32_t millisecondsFromNow)
-{
-  rtError e = RT_OK;
-
-  bool hasDipatchThread = env->Config->server_use_dispatch_thread();
-  if (hasDipatchThread)
-  {
-    usleep(millisecondsFromNow * 1000);
-    (void ) env;
-  }
-  else
-  {
-    auto endTime = std::chrono::milliseconds(millisecondsFromNow) + std::chrono::system_clock::now();
-    while (endTime > std::chrono::system_clock::now())
-    {
-      e = rtRemoteRun(env, 16);
-      if (e != RT_OK && e != RT_ERROR_QUEUE_EMPTY)
-        return e;
-    }
-  }
-  return e;
-}
-
-class rtLcd : public rtObject
-{
-  rtDeclareObject(rtLcd, rtObject);
-  rtProperty(text, text, setText, rtString);
-  rtProperty(height, height, setHeight, uint32_t);
-  rtProperty(width, width, setWidth, uint32_t);
-
-  rtString text() const { return m_text; }
-  rtError  text(rtString& s) const { s = m_text; return RT_OK; }
-  rtError  setText(rtString const& s) { m_text = s; return RT_OK; }
-
-  uint32_t height() const { return m_height; }
-  rtError  height(uint32_t& s) const { s = m_height; return RT_OK; }
-  rtError  setHeight(uint32_t s) { m_height = s; return RT_OK; }
-
-  uint32_t width() const { return m_width; }
-  rtError  width(uint32_t& s) const { s = m_width; return RT_OK; }
-  rtError  setWidth(uint32_t s) { m_width = s; return RT_OK; }
-
-private:
-  rtString m_text;
-  uint32_t m_width;
-  uint32_t m_height;
-};
 
 class rtEcho : public rtObject
 {
   rtDeclareObject(rtEcho, rtEcho);
   rtProperty(message, getMessage, setMessage, rtString);
-  rtProperty(onMessageChanged, getOnMessageChanged, setOnMessageChanged, rtFunctionRef);
-
+  rtMethod1ArgAndNoReturn("callTestMethod", callTestMethod, rtString);
 public:
   rtError getMessage(rtString& s) const
     { s = m_msg; return RT_OK; }
 
-  rtError setMessage(rtString const& s)
+  rtError setMessage(rtString const& )
   {
-    rtError e = RT_OK;
-    m_msg = s;
-    if (m_func)
-    {
-      e = m_func.send(s);
-      if (e != RT_OK)
-        rtLogError("failed to notify of message changed. %s", rtStrError(e));
-    }
+    static int i=0;
+    if ( ! (++i % 1000))
+        puts("1k iters!");
     return RT_OK;
   }
-
-  rtError getOnMessageChanged(rtFunctionRef& func) const
-    { func = m_func; return RT_OK; }
-
-  rtError setOnMessageChanged(rtFunctionRef const& func)
-    { m_func = func; return RT_OK; }
-
-  static rtError handleMessageChanged(int /*argc*/, rtValue const* argv, rtValue* /*result*/, void* /*argp*/)
+  rtError callTestMethod(rtString const& )
   {
-    rtString s = argv[0].toString();
-    rtLogInfo("message has changed: %s", s.cString());
-    return RT_OK;
+    static int i=0;
+    if ( ! (++i % 1000))
+        puts("callTestMethod 1k iters!");
+    return RT_OK;   
   }
-
 private:
   rtString m_msg;
   rtFunctionRef m_func;
 };
 
-
-class rtThermostat : public rtObject
-{
-public:
-  rtDeclareObject(rtThermostat, rtObject);
-  rtProperty(lcd, lcd, setLcd, rtObjectRef);
-  rtProperty(onTempChanged, onTempChanged, setOnTempChanged, rtFunctionRef);
-
-  // rtMethodNoArgAndNoReturn("hello", hello);
-  rtMethod2ArgAndReturn("add", add, int32_t, int32_t, int32_t);
-
-  rtError add(int32_t x, int32_t y, int32_t& result)
-  {
-    result = x + y;
-    return RT_OK;
-  }
-
-  rtObjectRef lcd() const { return m_lcd; }
-  rtError     lcd(rtObjectRef& ref) const { ref = m_lcd; return RT_OK; }
-  rtError     setLcd(rtObjectRef lcd) { m_lcd = lcd; return RT_OK; }
-
-  rtFunctionRef onTempChanged() const { return m_onTempChanged; } 
-  rtError onTempChanged(rtFunctionRef& ref) const { ref = m_onTempChanged; return RT_OK; } 
-  rtError setOnTempChanged(rtFunctionRef ref) { m_onTempChanged = ref; return RT_OK; } 
-
-  rtError hello()
-  {
-    rtLogInfo("hello");
-    return RT_OK;
-  }
-
-private:
-  rtObjectRef 		m_lcd;
-  rtFunctionRef 	m_onTempChanged;
-};
-
-rtDefineObject(rtLcd, 	rtObject);
-rtDefineProperty(rtLcd, text);
-rtDefineProperty(rtLcd, width);
-rtDefineProperty(rtLcd, height);
-
 rtDefineObject(rtEcho, rtObject);
 rtDefineProperty(rtEcho, message);
-rtDefineProperty(rtEcho, onMessageChanged);
+rtDefineMethod(rtEcho, callTestMethod);
 
-rtDefineObject(rtThermostat, rtObject);
-rtDefineProperty(rtThermostat, lcd);
-rtDefineProperty(rtThermostat, onTempChanged);
-rtDefineMethod(rtThermostat, add);
+GMainLoop* gLoop;
+int gPipefd[2];
 
-static rtError my_callback(int /*argc*/, rtValue const* /*argv*/, rtValue* result, void* /*argp*/)
+void rtMainLoopCb(void*)
 {
-  static int i = 10;
+  rtError err;
+  err = rtRemoteProcessSingleItem();
+  if(RT_OK != err)
+	  printf("error processing item, %d\n", err);
+}
 
-  char buff[256];
-  snprintf(buff, sizeof(buff), "Hello World again (%d) from:%d", i++, (int) getpid());
-  if (result)
-  {
-    *result = rtValue(buff);
-  }
-  return RT_OK;
+void rtRemoteCallback_(void*)
+{
+  static char temp[1];
+  int ret = HANDLE_EINTR_EAGAIN(write(gPipefd[PIPE_WRITE], temp, 1));
+  if (ret == -1)
+    perror("can't write to pipe");
 }
 
 
-static char const* objectName = "com.xfinity.xsmart.Thermostat.JakesHouse";
+timespec time_diff(timespec start, timespec end)
+{
+    timespec temp;
+    if ((end.tv_nsec-start.tv_nsec)<0) {
+        temp.tv_sec = end.tv_sec-start.tv_sec-1;
+        temp.tv_nsec = 1000000000+end.tv_nsec-start.tv_nsec;
+    } else {
+        temp.tv_sec = end.tv_sec-start.tv_sec;
+        temp.tv_nsec = end.tv_nsec-start.tv_nsec;
+    }
+    return temp;
+}
+
+float calculateSD(std::vector<float> v)
+{
+  double sum = std::accumulate(v.begin(), v.end(), 0.0);
+  double mean = sum / v.size();
+
+  std::vector<double> diff(v.size());
+  std::transform(v.begin(), v.end(), diff.begin(),
+                 std::bind2nd(std::minus<double>(), mean));
+  double sq_sum = std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);
+  double stdev = std::sqrt(sq_sum / v.size());
+  return stdev;
+}
+
+void Test_Set_Property(rtObjectRef obj)
+{
+  rtError e;
+
+  int i = iter_count;
+  timespec start, end, diff, total_start, total_end;
+
+  vector<float> results;
+  results.resize(iter_count);
+
+  clock_gettime(CLOCK_REALTIME, &total_start);
+  while (i--)
+  {
+    clock_gettime(CLOCK_REALTIME, &start);
+    e = obj.set("message", "test");
+    if (e != RT_OK)
+      puts("error setting property");
+    clock_gettime(CLOCK_REALTIME, &end);
+    diff = time_diff(start, end);
+    float diff_ms = ((diff.tv_sec * 1000) + diff.tv_nsec/1000000.0);
+    results[i] = diff_ms;
+  }
+  clock_gettime(CLOCK_REALTIME, &total_end);
+
+  diff = time_diff(total_start, total_end);
+  float diff_ms = ((diff.tv_sec * 1000) + diff.tv_nsec/1000000.0);
+
+  printf("%d iterations. Min time: %f, max time: %f, Deviation = %f ms, total time = %f ms, avg time per iteration: %f\n",
+      iter_count,
+      *std::min_element(results.begin(), results.end()),
+      *std::max_element(results.begin(), results.end()),
+      calculateSD(results),
+      diff_ms,
+      diff_ms/iter_count);
+}
+
+void Test_Call_Method(rtObjectRef obj)
+{
+
+  int i = iter_count;
+  rtError e;
+
+  timespec start, end, diff, total_start, total_end;
+
+  vector<float> results;
+  results.resize(iter_count);
+
+  clock_gettime(CLOCK_REALTIME, &total_start);
+
+  while (i--)
+  {
+    clock_gettime(CLOCK_REALTIME, &start);
+    e = obj.send("callTestMethod", "test");
+    if (e != RT_OK)
+      puts("error calling method");
+    clock_gettime(CLOCK_REALTIME, &end);
+    diff = time_diff(start, end);
+    double diff_ms = ((diff.tv_sec * 1000) + diff.tv_nsec/1000000.0);
+    results[i] = diff_ms;
+  }
+  clock_gettime(CLOCK_REALTIME, &total_end);
+
+  diff = time_diff(total_start, total_end);
+  float diff_ms = ((diff.tv_sec * 1000) + diff.tv_nsec/1000000.0);
+
+  printf("%d iterations. Min time: %f, max time: %f, Deviation = %f ms, total time = %f ms, avg time per iteration: %f\n",
+      iter_count,
+      *std::min_element(results.begin(), results.end()),
+      *std::max_element(results.begin(), results.end()),
+      calculateSD(results),
+      diff_ms,
+      diff_ms/iter_count);
+
+}
 
 void Test_Echo_Client()
 {
@@ -176,257 +186,50 @@ void Test_Echo_Client()
   rtError e = rtRemoteLocateObject(env, "echo.object", obj);
   RT_ASSERT(e == RT_OK);
 
-  e = obj.set("onMessageChanged", new rtFunctionCallback(rtEcho::handleMessageChanged));
-  if (e != RT_OK)
-    rtLogError("failed to set message handler: %s", rtStrError(e));
+  Test_Set_Property(obj);
+  Test_Call_Method(obj);
 
-  int i = 0;
-  char buff[256];
-
-  while (true)
-  {
-    memset(buff, 0, sizeof(buff));
-    sprintf(buff, "hello:%06d", i++);
-    e = obj.set("message", buff);
-    rtLogInfo("set:%s", rtStrError(e));
-
-    e = rtRemoteRunUntil(env, 1000);
-    rtLogInfo("rtRemoteRun:%s", rtStrError(e));
-  }
+  puts("done!");
 }
 
 void Test_Echo_Server()
 {
+  gLoop = g_main_loop_new(g_main_context_default(), FALSE);
+
+  auto *source = pipe_source_new(gPipefd, rtMainLoopCb, nullptr);
+  g_source_attach(source, g_main_loop_get_context(gLoop));
+
+  rtRemoteRegisterQueueReadyHandler( rtEnvironmentGetGlobal(), rtRemoteCallback_, nullptr );
+
+  rtError e = rtRemoteInit();
+
+  if (e != RT_OK)
+      rtLogError("failed to initialize rtRemoteInit: %d", e);
+
   rtObjectRef obj(new rtEcho());
-  rtError e = rtRemoteRegisterObject(env, "echo.object", obj);
+  e = rtRemoteRegisterObject(env, "echo.object", obj);
   RT_ASSERT(e == RT_OK);
-  while (true)
-  {
-    e = rtRemoteRunUntil(env, 1000);
-    rtLogInfo("rtRemoteRun:%s", rtStrError(e));
-  }
+
+  g_main_loop_run(gLoop);
+  rtRemoteShutdown();
+  g_source_unref(source);
 }
 
-void Test_SetProperty_Basic_Client()
-{
-  rtObjectRef objectRef;
-  rtError e = rtRemoteLocateObject(env, "test.lcd", objectRef);
-  RT_ASSERT(e == RT_OK);
-
-  int i = 10;
-  while (true)
-  {
-    e = objectRef.set("height", i);
-    RT_ASSERT(e == RT_OK);
-
-    if (i % 1000 == 0)
-      rtLogInfo("set:%d", i);
-
-    uint32_t n = objectRef.get<uint32_t>("height");
-
-    if (i % 1000 == 0)
-      rtLogInfo("get:%d", n);
-
-    RT_ASSERT(n == static_cast<uint32_t>(i));
-
-    i++;
-
-    // sleep(1);
-  }
-}
-
-void Test_SetProperty_Basic_Server()
-{
-  rtObjectRef obj(new rtLcd());
-  rtError e = rtRemoteRegisterObject(env, "test.lcd", obj);
-  RT_ASSERT(e == RT_OK);
-  while (true)
-  {
-    rtError e = rtRemoteRunUntil(env, 1000);
-    rtLogInfo("rtRemoteRun:%s", rtStrError(e));
-  }
-}
-
-void Test_FunctionReferences_Client()
-{
-  rtObjectRef objectRef;
-  rtError e = rtRemoteLocateObject(env, objectName, objectRef);
-  RT_ASSERT(e == RT_OK);
-
-  e = objectRef.set("onTempChanged", new rtFunctionCallback(my_callback));
-  RT_ASSERT(e == RT_OK);
-
-  while (true)
-  {
-    rtError e = rtRemoteRunUntil(env, 1000);
-    rtLogInfo("rtRemoteRun:%s", rtStrError(e));
-  }
-
-  while (1) sleep(1);
-}
-
-void Test_FunctionReferences_Server()
-{
-  rtObjectRef obj(new rtThermostat());
-  rtError e = rtRemoteRegisterObject(env, objectName, obj);
-  RT_ASSERT(e == RT_OK);
-
-  // locator.removeObject(objectName);
-  int temp = 50;
-
-  while (1)
-  {
-    rtFunctionRef ref;
-    obj.get("onTempChanged", ref);
-
-    if (ref)
-    {
-      rtValue arg1(temp++);
-
-      rtString s;
-      rtError e = ref.sendReturns<rtString>(arg1, s);
-      if (e != RT_OK)
-      {
-        rtLogError("failed to send function: %s", rtStrError(e));
-        return;
-      }
-
-      rtLogInfo("s: %s", s.cString());
-    }
-    else
-    {
-      rtLogInfo("onTempChanged is null");
-    }
-
-    rtError e = rtRemoteRunUntil(env, 1000);
-    rtLogInfo("rtRemoteRun:%s", rtStrError(e));
-  }
-}
-
-void
-Test_MethodCall_Client()
-{
-  rtObjectRef objectRef;
-  rtError e = rtRemoteLocateObject(env, objectName, objectRef);
-  RT_ASSERT(e == RT_OK);
-
-  int i = 1;
-  while (true)
-  {
-    rtValue val(i);
-    rtValue sum(0);
-    rtError e = objectRef.sendReturns("add", val, val, sum);
-    rtLogInfo("%d + %d == %d", i, i, sum.toInt32());
-    RT_ASSERT(e == RT_OK);
-    sleep(1);
-    i += 1;
-  }
-}
-
-void
-Test_MethodCall_Server()
-{
-  rtObjectRef obj(new rtThermostat());
-  rtError e = rtRemoteRegisterObject(env, objectName, obj);
-  RT_ASSERT(e == RT_OK);
-  while (true)
-  {
-    rtError e = rtRemoteRunUntil(env, 1000);
-    rtLogInfo("rtRemoteRun:%s", rtStrError(e));
-  }
-}
-
-void
-Test_SetProperty_Object_Client()
-{
-  rtObjectRef objectRef;
-  rtError e = rtRemoteLocateObject(env, objectName, objectRef);
-  RT_ASSERT(e == RT_OK);
-
-  int n = 10;
-  char buff[256];
-
-  while (true)
-  {
-    rtObjectRef lcd;
-    e = objectRef.get("lcd", lcd);
-
-    rtString s = lcd.get<rtString>("text");
-    rtLogInfo("text: %s", s.cString());
-
-    snprintf(buff, sizeof(buff), "hello from me:%d", n++);
-    s = buff;
-    lcd.set("text", s);
-
-    RT_ASSERT(e == RT_OK);
-
-    sleep(1);
-  }
-}
-
-void
-Test_SetProperty_Object_Server()
-{
-  rtObjectRef obj(new rtThermostat());
-
-  rtObjectRef lcd(new rtLcd());
-  lcd.set("text", "This is the lcd");
-  lcd.set("width", 10);
-  lcd.set("height", 11);
-
-  obj.set("lcd", lcd);
-
-  rtError e = rtRemoteRegisterObject(env, objectName, obj);
-  RT_ASSERT(e == RT_OK);
-  while (true)
-  {
-    rtError e = rtRemoteRunUntil(env, 1000);
-    rtLogInfo("rtRemoteRun:%s", rtStrError(e));
-  }
-}
-
-struct TestCase
-{
-  std::function<void ()> client;
-  std::function<void ()> server;
-};
-
-std::map< int, TestCase > testCases;
-
-
-int main(int argc, char* /*argv*/[])
+int main(int /*argc*/, char* /*argv*/[])
 {
   env = rtEnvironmentGetGlobal();
-
-  // runs separate name server which communicates with resolver
-  if (argc == 3)
   {
-    rtError e = rtRemoteInitNs(env);
-    RT_ASSERT(e == RT_OK);
-    while(1);
-    rtRemoteShutdownNs(env);
-    return 0;
-  }
-  else
-  {
-    rtError e = rtRemoteInit(env);
-    RT_ASSERT(e == RT_OK);
-
-    if (argc == 2)
+    std::string local_file_name;
+    if (getenv("CLIENT_ONLY"))
     {
+      rtError e = rtRemoteInit(env);
+      if(RT_OK != e)
+    	  puts("error running init");
       Test_Echo_Client();
-      // Test_FunctionReferences_Client();
-      // Test_MethodCall_Client();
-      // Test_SetProperty_Object_Client();
-      // Test_SetProperty_Basic_Client();
     }
     else
     {
-      // Test_SetProperty_Basic_Server();
       Test_Echo_Server();
-      // Test_FunctionReferences_Server();
-      // Test_SetProperty_Object_Server();
-      // Test_MethodCall_Server();
     }
 
     rtRemoteShutdown(env);

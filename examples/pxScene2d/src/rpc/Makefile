@@ -1,4 +1,4 @@
-all: rpcSampleApp rpcSampleApp_s
+all: rpcSampleApp 
 
 BUILD_CXX ?= $(CXX)
 
@@ -38,10 +38,10 @@ RTRPC_SRCS=\
   rtRemoteMapperMap.cpp \
   rtRemoteMapperFile.cpp \
   rtRemoteMapperSql.cpp \
-  rtRemoteEndpointHandleStreamServer.cpp
+  rtRemoteEndpointHandleStreamServer.cpp glib_utils.cpp \
 
 SAMPLEAPP_SRCS=\
-  rpc_main.cpp
+  rpc_main.cpp glib_utils.cpp
 
 
 ifeq ($V, 1)
@@ -56,6 +56,8 @@ else
   BUILD_CXX_PRETTY = @echo " [CC] $<" ; $(BUILD_CXX)
 endif
 
+#DEBUG=1
+
 ifeq ($(DEBUG), 1)
   CXXFLAGS += -DRT_RPC_DEBUG -DRT_DEBUG
   CFLAGS   += -g -O0 -fno-inline
@@ -69,10 +71,10 @@ ifeq ($(PROFILE), 1)
 endif
 
 
-CFLAGS+=-DRAPIDJSON_HAS_STDSTRING -Werror -Wall -Wextra -DRT_PLATFORM_LINUX -I../ -I. -fPIC
-CFLAGS+=-DRT_REMOTE_LOOPBACK_ONLY
-CXXFLAGS+=-std=c++0x $(CFLAGS)
-LDFLAGS =-pthread -ldl -luuid -Wl,-rpath=../../,--enable-new-dtags
+CFLAGS+=-DRAPIDJSON_HAS_STDSTRING  -Wall -Wextra -DRT_PLATFORM_LINUX -I../ -I. -fPIC
+CFLAGS+=-DRT_REMOTE_LOOPBACK_ONLY `pkg-config --cflags glib-2.0`
+CXXFLAGS+=-std=c++0x $(CFLAGS) 
+LDFLAGS =-pthread -ldl -luuid -Wl,-rpath=../../,--enable-new-dtags `pkg-config --libs glib-2.0` -lwtf
 OBJDIR=obj
 
 RTCORE_OBJS =$(patsubst ../%.cpp, %.o        , $(notdir $(RTCORE_SRCS)))
@@ -135,10 +137,8 @@ librtRemote.so: $(RTRPC_OBJS)
 librtRemote_s.a: $(RTRPC_OBJS)
 	$(AR) rcs -o $@ $(RTRPC_OBJS)
 
-rpcSampleApp: $(SAMPLEAPP_OBJS) librtRemote.so
-	$(CXX_PRETTY) $(SAMPLEAPP_OBJS) $(LDFLAGS) -o $@ -L./ -L../ -lrtCore -lrtRemote
+rpcSampleApp: $(SAMPLEAPP_OBJS) librtRemote.so Makefile $(SAMPLEAPP_SRCS)
+	$(CXX_PRETTY) $(SAMPLEAPP_OBJS)   -o $@ -L./ -L../ -lrtCore -lrtRemote -Wl,-rpath=. -Wl,-rpath=..  $(LDFLAGS) 
 
-rpcSampleApp_s: $(SAMPLEAPP_OBJS) librtRemote_s.a
-	$(CXX_PRETTY) $(SAMPLEAPP_OBJS) $(LDFLAGS) -o $@ -L./ -L../ -lrtCore_s -lrtRemote_s
 
 .PHONY: all debug clean
